@@ -1,0 +1,11 @@
+
+<Window.Resources>
+    <selectors:DeviceWindowTemplateSelector x:Key="DeviceWindowTemplateSelector">
+        <selectors:DeviceWindowTemplateSelector.DeviceInfoTemplate>
+            <!-- 设备信息模板 -->
+        </selectors:DeviceWindowTemplateSelector.DeviceInfoTemplate>
+        <selectors:DeviceWindowTemplateSelector.WindowInfoTemplate>
+            <!-- 窗口信息模板 -->
+        </selectors:DeviceWindowTemplateSelector.WindowInfoTemplate>
+    </selectors:DeviceWindowTemplateSelector>
+</Window.Resources>

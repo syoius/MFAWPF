@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="DangerColor">#FFDB3340</Color>
+    <Color x:Key="DarkDangerColor">#FFDB3340</Color>
+    <Color x:Key="WarningColor">#FFE9AF20</Color>
+    <Color x:Key="DarkWarningColor">#FFE9AF20</Color>
+    <Color x:Key="InfoColor">#FF00BCD4</Color>
+    <Color x:Key="DarkInfoColor">#FF00BCD4</Color>
+    <Color x:Key="SuccessColor">#FF2DB84d</Color>
+    <Color x:Key="DarkSuccessColor">#FF2DB84d</Color>
+    <Color x:Key="PrimaryColor">#FF326CF3</Color>
+    <Color x:Key="DarkPrimaryColor">#FF326CF3</Color>
+<Color x:Key="PrimaryColor">#0078D4</Color>
+    <Color x:Key="PrimaryColorHover">#106EBE</Color>
+    <Color x:Key="PrimaryColorPressed">#005A9E</Color>
+    <Color x:Key="PrimaryColorLight">#EFF6FC</Color>
+    <Color x:Key="PrimaryColorLighter">#DEECF9</Color>
+    <Color x:Key="GrayColor3">#CCCCCC</Color>
+    <Color x:Key="GrayColor4">#666666</Color>
+</ResourceDictionary>

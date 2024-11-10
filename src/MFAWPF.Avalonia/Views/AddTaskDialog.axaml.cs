@@ -1,12 +1,13 @@
-using System.Collections.ObjectModel;
-using System.Windows;
-using HandyControl.Data;
-using MFAWPF.Utils;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using MFAWPF.Core.Extensions;
 using MFAWPF.ViewModels;
+using System.Collections.ObjectModel;
 
-namespace MFAWPF.Views;
+namespace MFAWPF.Avalonia.Views;
 
-public partial class AddTaskDialog
+public partial class AddTaskDialog : Window
 {
     private DragItemViewModel? _outputContent;
     public AddTaskDialogViewModel? Data;
@@ -31,22 +32,23 @@ public partial class AddTaskDialog
         }
     }
 
-    private void Add(object sender, RoutedEventArgs e)
+    private void Add(object? sender, RoutedEventArgs e)
     {
-        DialogResult = true;
-        OutputContent = ListBoxDemo.SelectedValue as DragItemViewModel;
-        Close();
+        Close(this.FindControl<ListBox>("TaskList")?.SelectedItem as DragItemViewModel);
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        MainWindow.Data?.SetIdle(true);
+        // 通过 ViewModelLocator 获取 MainViewModel
+        var mainViewModel = App.Current.Services.GetService<MainViewModel>();
+        mainViewModel?.SetIdle(true);
         base.OnClosed(e);
     }
 
-    private void SearchBar_OnSearchStarted(object sender, FunctionEventArgs<string> e)
+    private void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
-        string key = e.Info;
+        var searchBox = sender as TextBox;
+        string? key = searchBox?.Text;
 
         if (string.IsNullOrEmpty(key))
         {

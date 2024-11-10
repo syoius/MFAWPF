@@ -1,0 +1,81 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MFAWPF.Avalonia.Views"
+        mc:Ignorable="d"
+        x:Class="MFAWPF.Avalonia.Views.AdbEditorDialog"
+        Icon="/Assets/logo.ico"
+        Title="{DynamicResource AdbEditor}"
+        Width="350"
+        Height="285"
+        MinWidth="350"
+        MinHeight="285"
+        CanResize="True"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SecundaryBackgroundColor}">
+
+    <Grid>
+        <StackPanel Orientation="Vertical">
+            <TextBox HorizontalAlignment="Stretch"
+                     Margin="15 15 15 10"
+                     Text="{Binding AdbName}"
+                     Watermark="{DynamicResource AdbName}"
+                     Classes="clearButton" />
+
+            <Grid HorizontalAlignment="Stretch" Margin="15 10 15 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="40" />
+                </Grid.ColumnDefinitions>
+                
+                <TextBox Grid.Column="0"
+                         HorizontalAlignment="Stretch"
+                         Text="{Binding AdbPath}"
+                         Watermark="{DynamicResource AdbPath}"
+                         Classes="clearButton" />
+                
+                <Button Grid.Column="1"
+                        ToolTip.Tip="{DynamicResource Load}"
+                        Click="Load">
+                    <PathIcon Data="{StaticResource LoadGeometry}"
+                             Width="15"
+                             Height="15"
+                             Foreground="{DynamicResource GrayColor4}" />
+                </Button>
+            </Grid>
+
+            <TextBox HorizontalAlignment="Stretch"
+                     Text="{Binding AdbSerial}"
+                     Margin="15 10 15 10"
+                     Watermark="{DynamicResource AdbSerial}"
+                     Classes="clearButton" />
+
+            <TextBox HorizontalAlignment="Stretch"
+                     Text="{Binding AdbConfig}"
+                     Margin="15 10 15 10"
+                     Watermark="{DynamicResource AdbConfig}"
+                     Classes="clearButton" />
+
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0 10 0 10">
+                <Button Classes="primary"
+                        HorizontalAlignment="Stretch"
+                        Click="Save"
+                        Content="{DynamicResource ButtonSave}"
+                        Width="150"
+                        Height="30"
+                        Margin="5 0 5 0" />
+
+                <Button Classes="secondary"
+                        Width="150"
+                        Click="Cancel"
+                        Content="{DynamicResource ButtonCancel}"
+                        Height="30"
+                        Margin="15 0 5 0" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

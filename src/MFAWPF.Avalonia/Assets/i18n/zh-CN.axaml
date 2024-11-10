@@ -1,0 +1,16 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=netstandard">
+    <system:String x:Key="AppTitle">MFA 任务管理器</system:String>
+    <system:String x:Key="TabADB">ADB</system:String>
+    <system:String x:Key="TabTask">任务</system:String>
+    <system:String x:Key="TabLog">日志</system:String>
+    <system:String x:Key="TabSetting">设置</system:String>
+    <system:String x:Key="ButtonStartTask">开始任务</system:String>
+    <system:String x:Key="ButtonStopTask">停止任务</system:String>
+    <system:String x:Key="TooltipDragLabel">标签顺序可拖动</system:String>
+    <system:String x:Key="DuplicateTaskError">任务重复</system:String>
+    <system:String x:Key="NotificationError">错误</system:String>
+    <system:String x:Key="NotificationWarning">警告</system:String>
+    <system:String x:Key="NotificationInfo">信息</system:String>
+</ResourceDictionary>

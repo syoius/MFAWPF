@@ -1,7 +1,32 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:MFAWPF.Avalonia.Converters"
              x:Class="MFAWPF.Avalonia.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary>
+                    <converters:SubtractConverter x:Key="SubtractConverter"/>
+                </ResourceDictionary>
+                <ResourceDictionary Source="/Styles/Colors.axaml"/>
+                <ResourceDictionary Source="/Styles/Brushes.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+    
     <Application.Styles>
-        <FluentTheme />
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                <!-- 亮色主题 -->
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SystemAccentColor">{DynamicResource PrimaryColor}</Color>
+                </ResourceDictionary>
+                <!-- 暗色主题 -->
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="SystemAccentColor">{DynamicResource DarkPrimaryColor}</Color>
+                </ResourceDictionary>
+            </FluentTheme.Palettes>
+        </FluentTheme>
+        <StyleInclude Source="/Styles/MainStyle.axaml"/>
     </Application.Styles>
 </Application>

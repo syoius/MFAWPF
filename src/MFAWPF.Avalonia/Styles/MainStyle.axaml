@@ -1,0 +1,84 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- TextBox 样式 -->
+    <Style Selector="TextBox.clearButton">
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource GrayColor3}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="8,0"/>
+    </Style>
+
+    <!-- 主要按钮样式 -->
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="16,8"/>
+    </Style>
+    
+    <Style Selector="Button.primary:pointerover">
+        <Setter Property="Background" Value="{DynamicResource PrimaryColorHover}"/>
+    </Style>
+    
+    <Style Selector="Button.primary:pressed">
+        <Setter Property="Background" Value="{DynamicResource PrimaryColorPressed}"/>
+    </Style>
+
+    <!-- 次要按钮样式 -->
+    <Style Selector="Button.secondary">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="16,8"/>
+    </Style>
+    
+    <Style Selector="Button.secondary:pointerover">
+        <Setter Property="Background" Value="{DynamicResource PrimaryColorLight}"/>
+    </Style>
+    
+    <Style Selector="Button.secondary:pressed">
+        <Setter Property="Background" Value="{DynamicResource PrimaryColorLighter}"/>
+    </Style>
+
+    <!-- PathIcon 样式 -->
+    <Style Selector="PathIcon">
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+    </Style>
+
+    <Style Selector="Button.close">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <Style Selector="Button.close > PathIcon">
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="Height" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+    </Style>
+
+    <Style Selector="Button.icon">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="8"/>
+    </Style>
+
+    <!-- TabControl侧边栏样式 -->
+    <Style Selector="TabControl.sidebar">
+        <Setter Property="Width" Value="120"/>
+        <Setter Property="Background" Value="{DynamicResource MainContentBackgroundBrush}"/>
+        <!-- 其他样式属性 -->
+    </Style>
+
+    <!-- 自定义滚动条样式 -->
+    <Style Selector="ScrollViewer.custom">
+        <Setter Property="IsInertiaEnabled" Value="True"/>
+        <!-- 其他滚动相关样式 -->
+    </Style>
+</Styles>

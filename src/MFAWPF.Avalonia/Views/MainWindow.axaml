@@ -1,11 +1,122 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:MFAWPF.ViewModels"
+        xmlns:controls="clr-namespace:MFAWPF.Avalonia.Controls"
+        xmlns:utils="clr-namespace:MFAWPF.Avalonia.Utils"
+        xmlns:converters="clr-namespace:MFAWPF.Avalonia.Converters"
+        mc:Ignorable="d"
+        x:Class="MFAWPF.Avalonia.Views.MainWindow"
+        x:Name="home"
+        Title="{DynamicResource AppTitle}"
+        Height="550" Width="850"
+        MinWidth="550" MinHeight="260"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MainContentBackgroundBrush}"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
 
-<Window.Resources>
-    <selectors:DeviceWindowTemplateSelector x:Key="DeviceWindowTemplateSelector">
-        <selectors:DeviceWindowTemplateSelector.DeviceInfoTemplate>
-            <!-- 设备信息模板 -->
-        </selectors:DeviceWindowTemplateSelector.DeviceInfoTemplate>
-        <selectors:DeviceWindowTemplateSelector.WindowInfoTemplate>
-            <!-- 窗口信息模板 -->
-        </selectors:DeviceWindowTemplateSelector.WindowInfoTemplate>
-    </selectors:DeviceWindowTemplateSelector>
-</Window.Resources>
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Window.Resources>
+        <converters:SubtractConverter x:Key="SubtractConverter" />
+        <converters:MultiBoolAndOrConverter x:Key="MultiBoolAndOrConverter" />
+        <converters:CustomIsEnabledConverter x:Key="CustomIsEnabledConverter" />
+
+        <DataTemplate x:Key="DeviceInfoTemplate">
+            <TextBlock>
+                <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} ({1})">
+                        <Binding Path="Name" />
+                        <Binding Path="AdbSerial" />
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
+        </DataTemplate>
+
+        <DataTemplate x:Key="WindowInfoTemplate">
+            <TextBlock Text="{Binding Name}" />
+        </DataTemplate>
+
+        <utils:DeviceWindowTemplateSelector x:Key="DeviceWindowTemplateSelector"
+                                          DeviceInfoTemplate="{StaticResource DeviceInfoTemplate}"
+                                          WindowInfoTemplate="{StaticResource WindowInfoTemplate}" />
+    </Window.Resources>
+    <!-- 添加通知区域 -->
+    <Panel>
+        <Grid RowDefinitions="30,*">
+        <!-- 标题栏 -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0"
+                       Orientation="Horizontal"
+                       IsHitTestVisible="False">
+                <TextBlock Text="{DynamicResource AppTitle}"
+                         VerticalAlignment="Center"
+                         Margin="6 0 4 0"
+                         Foreground="{DynamicResource PrimaryTextBrush}"/>
+                
+                <TextBlock x:Name="version"
+                         Text="Debug"
+                         VerticalAlignment="Center"
+                         Margin="2 0 4 0"
+                         Foreground="{DynamicResource GrayColor1}"/>
+                
+                <!-- 其他标题栏文本... -->
+            </StackPanel>
+
+            <controls:PinButton Grid.Column="1"
+                              x:Name="btnPin"
+                              Width="42"
+                              Content="📌"
+                              Click="ToggleWindowTopMost"/>
+        </Grid>
+
+        <!-- 主内容区 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 侧边菜单 -->
+            <TabControl Grid.Column="0"
+                      Classes="sidebar"
+                      SelectedIndex="{Binding SelectedTabIndex}">
+                <TabItem>
+                    <TabItem.Header>
+                        <PathIcon Data="{StaticResource HomeGeometry}"
+                                Width="20"
+                                Height="20"
+                                Foreground="{DynamicResource GrayColor4}"/>
+                    </TabItem.Header>
+                </TabItem>
+                <TabItem>
+                    <TabItem.Header>
+                        <PathIcon Data="{StaticResource SettingsRegular}"
+                                Width="20"
+                                Height="20"
+                                Foreground="{DynamicResource GrayColor4}"/>
+                    </TabItem.Header>
+                </TabItem>
+            </TabControl>
+
+            <!-- 主要内容区 -->
+            <Border Grid.Column="1"
+                    Margin="2"
+                    Background="{DynamicResource SecundaryBackgroundColor}"
+                    CornerRadius="5">
+                <!-- 其他内容... -->
+            </Border>
+        </Grid>
+        </Grid>
+    <!-- 通知区域 -->
+    <Panel Name="NotificationArea"
+           HorizontalAlignment="Right"
+           VerticalAlignment="Top"
+           Margin="0,20,10,0"/>
+    </Panel>
+</Window>

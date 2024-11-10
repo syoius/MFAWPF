@@ -1,0 +1,89 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:MFAWPF.ViewModels"
+        mc:Ignorable="d"
+        x:Class="MFAWPF.Avalonia.Views.AddTaskDialog"
+        Title="{DynamicResource ButtonAdd}"
+        Width="300"
+        Height="370"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        Background="{DynamicResource SecundaryBackgroundColor}">
+
+    <Design.DataContext>
+        <vm:AddTaskDialogViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- 标题栏 -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource MainContentBackgroundBrush}"
+                Height="34">
+            <Grid>
+                <TextBlock Text="{DynamicResource ButtonAdd}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontWeight="Bold"
+                          FontSize="17"/>
+                
+                <Button HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Width="22"
+                        Height="22"
+                        Margin="0,4,4,0"
+                        Classes="close"
+                        Click="Close">
+                    <PathIcon Data="{StaticResource ErrorGeometry}"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 内容区 -->
+        <StackPanel Grid.Row="1"
+                    Margin="15,10,15,0">
+            <TextBlock Text="{DynamicResource Task}"
+                      Foreground="{DynamicResource GrayColor4}"
+                      FontSize="12"
+                      FontWeight="Medium"
+                      Margin="0,0,0,8"/>
+
+            <TextBox Name="SearchBox"
+                     Watermark="{DynamicResource EnterTaskName}"
+                     Margin="0,0,0,8"
+                     TextChanged="SearchBox_TextChanged"/>
+
+            <ListBox Name="TaskList"
+                     Height="205"
+                     Margin="0,0,0,8"
+                     SelectionMode="Single"
+                     SelectedIndex="{Binding SelectedIndex}"
+                     ItemsSource="{Binding DataList}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}"
+                                 Margin="6,0,0,0"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0,8,0,0">
+                <Button Classes="primary"
+                        Content="{DynamicResource ButtonAdd}"
+                        Width="90"
+                        Height="30"
+                        Click="Add"/>
+
+                <Button Classes="secondary"
+                        Content="{DynamicResource ButtonCancel}"
+                        Width="90"
+                        Height="30"
+                        Margin="20,0,0,0"
+                        Click="Close"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

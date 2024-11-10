@@ -1,30 +1,16 @@
-﻿
-using MFAWPF.Utils;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MFAWPF.Core.Models;
 using Newtonsoft.Json;
 
 namespace MFAWPF.ViewModels;
 
-public class TaskItemViewModel : ObservableObject
+public partial class TaskItemViewModel : ObservableObject
 {
+    [ObservableProperty]
     private string _name = "未命名";
-
-    public string Name
-    {
-        get => _name;
-        set
-        {
-            if (Task != null)
-                Task.Name = value;
-            SetProperty(ref _name, value);
-        }
-    }
 
     private TaskModel? _task;
 
-    /// <summary>
-    /// Gets or sets the time.
-    /// </summary>
     public TaskModel? Task
     {
         get => _task;
@@ -36,6 +22,12 @@ public class TaskItemViewModel : ObservableObject
         }
     }
 
+    partial void OnNameChanged(string value)
+    {
+        if (Task != null)
+            Task.Name = value;
+    }
+
     public override string ToString()
     {
         var settings = new JsonSerializerSettings
@@ -44,10 +36,9 @@ public class TaskItemViewModel : ObservableObject
             NullValueHandling = NullValueHandling.Ignore,
             DefaultValueHandling = DefaultValueHandling.Ignore
         };
-        Dictionary<string, TaskModel> taskModels = new Dictionary<string, TaskModel>();
+        Dictionary<string, TaskModel> taskModels = new();
         if (Task != null)
             taskModels.Add(Name, Task);
         return JsonConvert.SerializeObject(taskModels, settings);
     }
-    
 }

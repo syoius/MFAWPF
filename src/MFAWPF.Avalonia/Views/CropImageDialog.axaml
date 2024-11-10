@@ -1,0 +1,114 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MFAWPF.Avalonia.Views"
+        mc:Ignorable="d"
+        x:Class="MFAWPF.Avalonia.Views.CropImageDialog"
+        Title="{DynamicResource ImageBrowserTitle}"
+        Height="200"
+        Width="400"
+        CanResize="True"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WhiteColor}">
+
+    <Grid RowDefinitions="40,*,60">
+        <!-- 标题栏 -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource MainContentBackgroundBrush}"
+                CornerRadius="10 10 0 0">
+            <Grid Height="34">
+                <TextBlock Text="{DynamicResource ImageBrowserTitle}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontWeight="Bold"
+                          FontSize="17"/>
+                
+                <Button Width="22"
+                        Height="22"
+                        Classes="close"
+                        Click="Close"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,4,4,0">
+                    <PathIcon Data="{StaticResource ErrorGeometry}"
+                             Foreground="{DynamicResource PrimaryColor}"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 内容区 -->
+        <Panel Grid.Row="1">
+            <ProgressBar Name="LoadingCircle"
+                        IsIndeterminate="True"
+                        Width="50"
+                        Height="50"
+                        Margin="10,5,5,0"/>
+
+            <Viewbox Name="ImageArea"
+                     IsVisible="False"
+                     HorizontalAlignment="Center">
+                <Grid>
+                    <Grid>
+                        <Image Name="image"
+                               Stretch="Uniform"
+                               MaxHeight="720"
+                               MaxWidth="1280"/>
+                        <Canvas Name="SelectionCanvas"
+                                Background="Transparent"
+                                ZIndex="1"
+                                PointerMoved="Canvas_MouseMove"
+                                PointerReleased="Canvas_MouseUp"
+                                PointerPressed="Canvas_MouseDown"/>
+                    </Grid>
+
+                    <TextBlock Name="MousePositionText"
+                              Foreground="White"
+                              Background="Transparent"
+                              ZIndex="2"
+                              FontWeight="Bold"
+                              FontSize="22"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Top"
+                              IsHitTestVisible="False"
+                              Margin="10,10,0,0">
+                        <TextBlock.Effect>
+                            <DropShadowEffect BlurRadius="0"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </Grid>
+            </Viewbox>
+        </Panel>
+
+        <!-- 底部按钮 -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,10,0,0">
+            <Button Classes="icon"
+                    ToolTip.Tip="{DynamicResource Load}"
+                    Height="30"
+                    Margin="10,0,0,10"
+                    Click="Load">
+                <PathIcon Data="{StaticResource LoadGeometry}"
+                         Width="15"
+                         Height="15"
+                         Foreground="{DynamicResource GrayColor4}"/>
+            </Button>
+
+            <Button Classes="primary"
+                    Content="{DynamicResource ButtonSave}"
+                    Width="90"
+                    Height="30"
+                    Margin="10,0,0,10"
+                    Click="SaveButton_Click"/>
+
+            <Button Classes="secondary"
+                    Content="{DynamicResource ButtonCancel}"
+                    Width="90"
+                    Height="30"
+                    Margin="20,0,10,10"
+                    Click="Close"/>
+        </StackPanel>
+    </Grid>
+</Window>

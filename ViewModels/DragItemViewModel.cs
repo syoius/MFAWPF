@@ -13,6 +13,7 @@ public class DragItemViewModel : ObservableObject
     {
         InterfaceItem = interfaceItem;
         Name = interfaceItem?.Name ?? "未命名";
+        LanguageManager.LanguageChanged += OnLanguageChanged;
     }
 
 
@@ -114,6 +115,19 @@ public class DragItemViewModel : ObservableObject
     {
         get => _visibility;
         set => SetProperty(ref _visibility, value);
+    }
+
+        private void UpdateContent()
+    {
+        if (!string.IsNullOrEmpty(InterfaceItem?.Name))
+        {
+            Name = LanguageManager.GetLocalizedString(Name);
+        }
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        UpdateContent();
     }
 
     /// <summary>

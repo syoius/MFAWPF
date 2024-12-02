@@ -51,6 +51,7 @@ public partial class MainWindow
 
     public MainWindow()
     {
+        LanguageManager.Initialize();
         InitializeComponent();
         Instance = this;
         version.Text = Version;
@@ -706,7 +707,7 @@ public partial class MainWindow
             Status = "MFAWPF", Subject = "Github", Margin = new Thickness(2),
             HorizontalAlignment = HorizontalAlignment.Center,
             Command = ControlCommands.OpenLink,
-            CommandParameter = "https://github.com/SweetSmellFox/MFAWPF"
+            CommandParameter = "https://github.com/syoius/MFAWPF"
         });
         var resourceLink = MaaInterface.Instance?.Url;
         if (!string.IsNullOrWhiteSpace(resourceLink))
@@ -733,8 +734,9 @@ public partial class MainWindow
         panel ??= settingPanel;
         var comboBox = new ComboBox
         {
-            SelectedIndex = DataSet.GetData("ResourceIndex", defaultValue), DisplayMemberPath = "Name",
+            SelectedIndex = DataSet.GetData("ResourceIndex", defaultValue),
             Style = FindResource("ComboBoxExtend") as Style,
+            DisplayMemberPath = "Name",
             Margin = new Thickness(5)
         };
 
@@ -749,7 +751,20 @@ public partial class MainWindow
         comboBox.SetValue(TitleElement.TitlePlacementProperty, TitlePlacementType.Top);
 
         if (MaaInterface.Instance?.Resource != null)
-            comboBox.ItemsSource = MaaInterface.Instance.Resource;
+        {
+            var a = new List<MaaInterface.MaaCustomResource>();
+            foreach (var VARIABLE in MaaInterface.Instance.Resource)
+            {
+                var o = new MaaInterface.MaaCustomResource
+                {
+                    Name = LanguageManager.GetLocalizedString(VARIABLE.Name),
+                    Path = VARIABLE.Path
+                };
+                a.Add(o);
+
+            }
+            comboBox.ItemsSource = a;
+        }
         comboBox.SelectionChanged += (sender, _) =>
         {
             var index = (sender as ComboBox)?.SelectedIndex ?? 0;
@@ -941,7 +956,7 @@ public partial class MainWindow
     private void AddIntroduction(Panel? panel = null, string input = "")
     {
         panel ??= settingPanel;
-
+        input = LanguageManager.GetLocalizedString(input);
         RichTextBox richTextBox = new RichTextBox
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -1270,6 +1285,14 @@ public partial class MainWindow
         {
             if (MaaInterface.Instance.Option.TryGetValue(option.Name, out var interfaceOption))
             {
+                if (interfaceOption.Cases != null)
+                {
+                    foreach (var VARIABLE in interfaceOption.Cases)
+                    {
+                        VARIABLE.Name = LanguageManager.GetLocalizedString(VARIABLE.Name);
+                    }
+                }
+
                 ComboBox comboBox = new ComboBox
                 {
                     SelectedIndex = option.Index ?? 0, Style = FindResource("ComboBoxExtend") as Style,

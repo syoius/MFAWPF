@@ -2,58 +2,59 @@
 <img alt="LOGO" src="https://github.com/SweetSmellFox/MFAWPF/blob/master/logo.png" width="256" height="256" />
 
 # MFAWPF
+
 [English](./README_en.md) | [简体中文](./README.md)
 
 </div>
 
 ## 基本介绍
 
-- 本项目是一个基于WPF框架开发的用户界面，旨在提供类似于MaaPiCli的功能
+- 本项目是一个基于 WPF 框架开发的用户界面，旨在提供类似于 MaaPiCli 的功能
 
 ## 说明
 
 ### 使用需求
 
-- .NET8运行库
-- 一个基于maaframework的非集成项目
+- .NET8 运行库
+- 一个基于 maaframework 的非集成项目
 
 ### 如何使用
 
 #### 自动安装
 
-- 下载项目中workflows/install.yml并修改```项目名称```,```作者名```,```项目名```,```MAAxxx```
-- 将修改后的install.yml替换MAA项目模板.github/workflows/install.yml
+- 下载项目中 workflows/install.yml 并修改`项目名称`,`作者名`,`项目名`,`MAAxxx`
+- 将修改后的 install.yml 替换 MAA 项目模板.github/workflows/install.yml
 - 推送新版本
 
 #### 手动安装
 
 - 下载最新发行版并解压
-- 将maafw项目中assets/resource中所有内容复制到MFAWPF/Resource中
-- 将maafw项目中assets/interface.json文件复制到MFAWPF/中
-- ***修改***刚刚复制的interface.json文件
+- 将 maafw 项目中 assets/resource 中所有内容复制到 MFAWPF/Resource 中
+- 将 maafw 项目中 assets/interface.json 文件复制到 MFAWPF/中
+- **_修改_**刚刚复制的 interface.json 文件
 - 下面是一个例子
 
- ```
+```
 {
-  "resource": [
-    {
-      "name": "官服",
-      "path": "{PROJECT_DIR}/resource/base"
-    },
-    {
-      "name": "Bilibili服",
-      "path": [
-        "{PROJECT_DIR}/resource/base",
-        "{PROJECT_DIR}/resource/bilibili"
-      ]
-    }
-  ],
-  "task": [
-    {
-      "name": "任务",
-      "entry": "任务"
-    }
-  ]
+ "resource": [
+   {
+     "name": "官服",
+     "path": "{PROJECT_DIR}/resource/base"
+   },
+   {
+     "name": "Bilibili服",
+     "path": [
+       "{PROJECT_DIR}/resource/base",
+       "{PROJECT_DIR}/resource/bilibili"
+     ]
+   }
+ ],
+ "task": [
+   {
+     "name": "任务",
+     "entry": "任务"
+   }
+ ]
 }
 ```
 
@@ -66,7 +67,7 @@
   "mirrorchyan_rid":  "项目ID(从Mirror酱下载的必要字段)", //默认为null , 比如 M9A
   "url":  "项目链接(目前应该只支持Github)", //默认为null , 比如 https://github.com/{Github账户}/{Github项目}
   "custom_title": "自定义标题", //默认为null, 使用该字段后，标题栏将只显示custom_title和version
-  "default_controller": "adb", //默认为adb, 启动后的默认控制器，可选项 adb , win32 
+  "default_controller": "adb", //默认为adb, 启动后的默认控制器，可选项 adb , win32
   "lock_controller":false, //默认为false, 是否锁定控制器，开启后用户不能在adb和win32中切换控制器
   "resource": [
     {
@@ -93,6 +94,7 @@
   ]
 }
 ```
+
 ### `doc`字符串格式：
 
 #### 使用类似`[color:red]`文本内容`[/color]`的标记来定义文本样式。
@@ -119,29 +121,20 @@
 
 - 内置 MFATools 可以用来裁剪图片和获取 ROI
 - 目前一些地方并没有特别完善,欢迎各位大佬贡献代码
-- 注意，由于 `MaaFramework` 于 2.0 移除了Exec Agent，所以目前无法通过注册interface注册Custom Action和Custom Recognition
-- `MFAWPF` 于v1.2.3.3加入动态注册Custom Action和Custom Recognition的功能，目前只支持C#,需要在Resource目录的custom下放置相应的.cs文件, 参考 [文档](./docs/zh_cn/自定义识别_操作.md)
-- 在exe同级目录中放置 `logo.ico` 后可以替换窗口的图标
-- `MFAWPF` 新增interface多语言支持,在`interface.json`同目录下新建`zh-cn.json`,`zh-tw.json`和`en-us.json`后，doc和任务的name和选项的name可以使用key来指代。MFAWPF会自动根据语言来读取文件的key对应的value。如果没有则默认为key
+- 注意，由于 `MaaFramework` 于 2.0 移除了 Exec Agent，所以目前无法通过注册 interface 注册 Custom Action 和 Custom Recognition
+- `MFAWPF` 于 v1.2.3.3 加入动态注册 Custom Action 和 Custom Recognition 的功能，目前只支持 C#,需要在 Resource 目录的 custom 下放置相应的.cs 文件, 参考 [文档](./docs/zh_cn/自定义识别_操作.md)
+- 在 exe 同级目录中放置 `logo.ico` 后可以替换窗口的图标
+- `MFAWPF` 新增 interface 多语言支持,在`interface.json`同目录下新建`zh-cn.json`,`zh-tw.json`和`en-us.json`后，doc 和任务的 name 和选项的 name 可以使用 key 来指代。MFAWPF 会自动根据语言来读取文件的 key 对应的 value。如果没有则默认为 key
 
-**注：在MFA中，于Pipeline中任务新增了俩个属性字段，分别为 `focus_tip` 和 `focus_tip_color`。**
+**注：在 MFA 中，于 Pipeline 中任务新增了俩个属性字段，分别为 `focus_tip` 和 `focus_tip_color`。**
 
-- `focus` : *bool*  
-  是否启用`focus_tip` 、`focus_succeeded`、 `focus_failed`。可选，默认false。
-- `focus_toast` : *string* 
-  当执行某任务前，Windows弹窗输出的内容。可选，默认空。
-- `focus_tip` : *string* | *list<string, >*  
-  当执行某任务前，在MFA右侧日志输出的内容。可选，默认空。
-- `focus_tip_color` : *string* | *list<string, >*  
-  当执行某任务前，在MFA右侧日志输出的内容的颜色。可选，默认为Gray。
-- `focus_succeeded` : *string* | *list<string, >*  
-  当执行某任务成功后，在MFA右侧日志输出的内容。可选，默认空。
-- `focus_succeeded_color` : *string* | *list<string, >*  
-  当执行某任务成功后，在MFA右侧日志输出的内容的颜色。可选，默认为Gray。
-- `focus_failed` : *string* | *list<string, >*  
-  当执行某任务失败时，在MFA右侧日志输出的内容。可选，默认空。
-- `focus_failed_color` : *string* | *list<string, >*  
-  当执行某任务失败时，在MFA右侧日志输出的内容的颜色。可选，默认为Gray。
+- `focus` : _bool_  
+  是否启用`focus_tip`。可选，默认 false。
+- `focus_tip` : _string_ | _list<string, >_  
+  当执行某任务时，在 MFA 右侧日志输出的内容。可选，默认空。
+- `focus_tip_color` : _string_ | _list<string, >_  
+  当执行某任务时，在 MFA 右侧日志输出的内容的颜色。可选，默认为 Gray。
+
 ## 致谢
 
 ### 开源库
@@ -156,9 +149,9 @@
 
 ### v1.0
 
-- [x] Pipeline的GUI编辑界面
+- [x] Pipeline 的 GUI 编辑界面
 - [x] Support EN
 
 ### v1.2
 
-- [ ] <strike>interface.json的GUI编辑界面</strike>
+- [ ] <strike>interface.json 的 GUI 编辑界面</strike>

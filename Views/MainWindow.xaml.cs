@@ -28,6 +28,7 @@ using ComboBox = HandyControl.Controls.ComboBox;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using ScrollViewer = HandyControl.Controls.ScrollViewer;
 using TextBox = HandyControl.Controls.TextBox;
+using MFAWPF.Controls;
 
 namespace MFAWPF.Views;
 
@@ -42,7 +43,10 @@ public partial class MainWindow
         $"v{Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "DEBUG"}";
 
     public Dictionary<string, TaskModel> TaskDictionary = new();
-    public MainWindow(ViewModels.MainViewModel viewModel)
+
+    private readonly MFAWPF.Utils.PresetManager _presetManager = new();
+
+    public MainWindow()
     {
         DataSet.Data = JsonHelper.ReadFromConfigJsonFile("config", new Dictionary<string, object>());
         DataSet.MaaConfig = JsonHelper.ReadFromConfigJsonFile("maa_option", new Dictionary<string, object>());
@@ -683,7 +687,6 @@ public partial class MainWindow
                 Margin = new Thickness(2)
             };
         AddResourcesOption(s1);
-
         ScrollViewer sv1 = new()
             {
                 Content = s1,
@@ -967,7 +970,7 @@ public partial class MainWindow
         FlowDocument flowDocument = new FlowDocument();
         Paragraph paragraph = new Paragraph();
 
-        string pattern = @"\[(?<tag>[^\]]+):?(?<value>[^\]]*)\](?<content>.*?)\[/\k<tag>\]";
+        string pattern = @"\[(?<tag>[^\]]+):(?<value>[^\]]*)\](?<content>.*?)\[/\k<tag>\]";
         Regex regex = new Regex(pattern);
         int lastIndex = 0;
 
@@ -1601,31 +1604,8 @@ public partial class MainWindow
             if (!value)
                 EditButton.Visibility = Visibility.Collapsed;
             DataSet.SetData("EnableEdit", value);
-            ViewModel.IsDebugMode = MFAExtensions.IsDebugMode();
-            if (!string.IsNullOrWhiteSpace(MaaInterface.Instance?.Message))
-            {
-                Growl.Info(MaaInterface.Instance.Message);
-            }
-
-        });
-        TaskManager.RunTaskAsync(async () =>
-        {
-            await Task.Delay(1000);
-            GrowlHelper.OnUIThread(() =>
-            {
-                if (DataSet.GetData("AutoMinimize", false))
-                {
-                    Collapse();
-                }
-
-                if (DataSet.GetData("AutoHide", false))
-                {
-                    Hide();
-                }
-            });
         });
     }
-
     public static void AppendVersionLog(string? resourceVersion)
     {
         if (resourceVersion is null)
@@ -1660,7 +1640,11 @@ public partial class MainWindow
 
     private void ToggleWindowTopMost(object sender, RoutedPropertyChangedEventArgs<bool> e)
     {
-        Topmost = e.NewValue;
+        if (!ViewModel.IsRunning)
+            return true;
+        var result = MessageBoxHelper.Show("ConfirmExitText".ToLocalization(),
+            "ConfirmExitTitle".ToLocalization(), buttons: MessageBoxButton.YesNo, icon: MessageBoxImage.Question);
+        return result == MessageBoxResult.Yes;
     }
 
     public static void AddLogByColor(string content,
@@ -1854,5 +1838,74 @@ public partial class MainWindow
         var result = MessageBoxHelper.Show("ConfirmExitText".ToLocalization(),
             "ConfirmExitTitle".ToLocalization(), buttons: MessageBoxButton.YesNo, icon: MessageBoxImage.Question);
         return result == MessageBoxResult.Yes;
+    }
+
+    private async void SavePreset(object sender, RoutedEventArgs e)
+    {
+        try 
+        {
+            LoggerService.LogInfo("开始保存预设流程");
+            
+            var inputDialog = new InputDialog
+            {
+                Title = "保存预设",
+                Message = "请输入预设名称:"
+            };
+
+            LoggerService.LogInfo("显示输入对话框");
+            if (inputDialog.ShowDialog() == true)
+            {
+                string presetName = inputDialog.InputText;
+                LoggerService.LogInfo($"用户输入的预设名称: {presetName}");
+                
+                if (string.IsNullOrWhiteSpace(presetName))
+                {
+                    LoggerService.LogInfo("预设名称为空，终止保存");
+                    Growl.Warning("预设名称不能为空");
+                    return;
+                }
+
+                LoggerService.LogInfo($"开始调用 PresetManager.SavePreset: {presetName}");
+                await _presetManager.SavePreset(presetName);
+                LoggerService.LogInfo("预设保存完成");
+            }
+            else
+            {
+                LoggerService.LogInfo("用户取消了保存预设操作");
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerService.LogError($"保存预设时发生异常: {ex}");
+            Growl.Error($"保存预设失败: {ex.Message}");
+        }
+    }
+
+    private async void LoadPreset(object sender, RoutedEventArgs e)
+    {
+        var presets = _presetManager.GetPresetNames();
+        if (!presets.Any())
+        {
+            Growl.Warning("没有可用的预设");
+            return;
+        }
+
+        var dialog = new PresetSelectDialog(presets);
+        if (dialog.ShowDialog() == true && dialog.SelectedPreset != null)
+        {
+            string selectedPreset = dialog.SelectedPreset;
+            var maaInterface = await _presetManager.LoadPreset(selectedPreset);
+            if (maaInterface != null)
+            {
+                MaaInterface.Instance = maaInterface;
+                
+                // 重新加载配置
+                DataSet.Data = JsonHelper.ReadFromConfigJsonFile("config", new Dictionary<string, object>());
+
+                // 重新初始化界面
+                RestartMFA();
+ 
+            }
+        }
     }
 }

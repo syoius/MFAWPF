@@ -6,12 +6,32 @@ namespace MFAWPF.Utils;
 public static class LogCleaner
 {
     private static readonly Timer CleanupTimer;
-    private const int CheckIntervalHours = 3; // 每3小时检查一次
-    private const long MaxSizeInBytes = 5 * 1024 * 1024; // 5MB
+    private const int CheckIntervalHours = 3;
+    
+    // 使用 LoggerService 的配置
+    private static readonly string LogDirectory;
+    private static readonly string LogFilePattern;
+    private static readonly long MaxSizeInBytes;
+    private static readonly int MaxArchiveFiles;
+    private static readonly string ArchivePath;
 
     static LogCleaner()
     {
-        CleanupTimer = new Timer(CheckIntervalHours * 60 * 60 * 1000); // 转换为毫秒
+        // 从 LoggerService 获取配置
+        LogDirectory = LoggerService.GetLogDirectory();
+        LogFilePattern = LoggerService.GetLogFilePattern();
+        MaxSizeInBytes = LoggerService.GetMaxFileSizeBytes();
+        MaxArchiveFiles = LoggerService.GetMaxArchiveFiles();
+        
+        // 设置归档路径
+        ArchivePath = Path.Combine(LogDirectory, "archive");
+        
+        // 确保目录存在
+        Directory.CreateDirectory(LogDirectory);
+        Directory.CreateDirectory(ArchivePath);
+
+        // 初始化定时器
+        CleanupTimer = new Timer(CheckIntervalHours * 60 * 60 * 1000);
         CleanupTimer.Elapsed += (_, _) => CleanupLargeDebugLogs();
         CleanupTimer.AutoReset = true;
         CleanupTimer.Start();
@@ -21,18 +41,15 @@ public static class LogCleaner
     {
         try
         {
-            string debugPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug");
-            string archivePath = Path.Combine(debugPath, "archive");
-            
-            if (!Directory.Exists(debugPath) || !Directory.Exists(archivePath))
+            if (!Directory.Exists(LogDirectory) || !Directory.Exists(ArchivePath))
             {
                 return;
             }
 
-            // 处理当前目录中的大文件
-            var logFiles = Directory.GetFiles(debugPath, "*.log")
-                                  .Where(f => !Path.GetFileName(f).StartsWith("old_"));
-                              
+            // 处理当前日志文件
+            var logFiles = Directory.GetFiles(LogDirectory, $"*{LogFilePattern}*")
+                                  .Where(f => !Path.GetFileName(f).StartsWith("archive_"));
+
             foreach (var logFile in logFiles)
             {
                 try
@@ -41,14 +58,15 @@ public static class LogCleaner
                     if (fileInfo.Length > MaxSizeInBytes)
                     {
                         string archiveName = Path.Combine(
-                            archivePath,
-                            $"log.{DateTime.Now:yyyy-MM-dd}.txt");
+                            ArchivePath,
+                            $"archive_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}_{Path.GetFileName(logFile)}");
 
-                        // 复制到归档目录
-                        File.Copy(logFile, archiveName, true);
-                        // 清空原文件
-                        File.WriteAllText(logFile, string.Empty);
-                        LoggerService.LogInfo($"已归档大型日志文件: {logFile} -> {archiveName}");
+                        if (!IsFileLocked(logFile))
+                        {
+                            File.Copy(logFile, archiveName, true);
+                            File.WriteAllText(logFile, string.Empty);
+                            LoggerService.LogInfo($"已归档大型日志文件: {logFile} -> {archiveName}");
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -58,16 +76,19 @@ public static class LogCleaner
             }
 
             // 清理旧的归档文件
-            var archiveFiles = Directory.GetFiles(archivePath, "log.*.txt")
+            var archiveFiles = Directory.GetFiles(ArchivePath)
                                       .OrderByDescending(f => File.GetCreationTime(f))
-                                      .Skip(2); // 保持与 nlog.config 中的 maxArchiveFiles 一致
+                                      .Skip(MaxArchiveFiles);
 
             foreach (var oldFile in archiveFiles)
             {
                 try
                 {
-                    File.Delete(oldFile);
-                    LoggerService.LogInfo($"已删除旧的归档文件: {oldFile}");
+                    if (!IsFileLocked(oldFile))
+                    {
+                        File.Delete(oldFile);
+                        LoggerService.LogInfo($"已删除旧的归档文件: {oldFile}");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -78,6 +99,21 @@ public static class LogCleaner
         catch (Exception ex)
         {
             LoggerService.LogError($"清理日志文件时发生错误: {ex.Message}");
+        }
+    }
+
+    private static bool IsFileLocked(string filePath)
+    {
+        try
+        {
+            using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                return false;
+            }
+        }
+        catch (IOException)
+        {
+            return true;
         }
     }
 }

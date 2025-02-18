@@ -19,7 +19,7 @@ public class VersionChecker
         TaskManager.RunTaskAsync(() => Checker.CheckForResourceUpdatesAsync(), null, "检测资源版本");
     }
 
-    public async Task CheckForGUIUpdatesAsync(string owner = "SweetSmellFox", string repo = "MFAWPF")
+    public async Task CheckForGUIUpdatesAsync(string owner = "syoius", string repo = "MFAWPF")
     {
         try
         {

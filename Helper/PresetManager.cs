@@ -125,18 +125,36 @@ namespace MFAWPF.Helper
                 string presetPath = Path.Combine(_presetPath, $"{name}.json");
                 LoggerService.LogInfo($"开始加载预设: {presetPath}");
                 
-                // 先读取预设文件内容
+                // 读取预设文件内容
                 string presetContent = await File.ReadAllTextAsync(presetPath);
                 LoggerService.LogInfo("已读取预设文件内容");
                 
-                // 将内容写入到 config.json
+                // 解析预设内容
+                var presetData = JsonConvert.DeserializeObject<Dictionary<string, object>>(presetContent);
+                if (presetData == null)
+                {
+                    throw new Exception("预设文件格式无效");
+                }
+
+                // 写入到 config.json
                 string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "config.json");
                 LoggerService.LogInfo($"写入预设到配置文件: {configPath}");
                 await File.WriteAllTextAsync(configPath, presetContent);
                 
-                // 从预设内容直接反序列化 MaaInterface 实例
+                // 更新 DataSet.Data
+                DataSet.Data = presetData;
+                
+                // 从预设内容反序列化 MaaInterface 实例
                 var maaInterface = JsonConvert.DeserializeObject<MaaInterface>(presetContent);
                 LoggerService.LogInfo("预设加载成功");
+                
+                // 刷新 TaskItems
+                if (presetData.ContainsKey("TaskItems"))
+                {
+                    var taskItems = JsonConvert.DeserializeObject<List<TaskInterfaceItem>>(
+                        presetData["TaskItems"].ToString() ?? "[]");
+                    DataSet.SetData("TaskItems", taskItems);
+                }
                 
                 return maaInterface;
             }

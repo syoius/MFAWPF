@@ -1895,12 +1895,13 @@ public partial class MainWindow
             {
                 MaaInterface.Instance = maaInterface;
                 
-                // 重新加载配置
-                DataSet.Data = JsonHelper.ReadFromConfigJsonFile("config", new Dictionary<string, object>());
-
-                // 重新初始化界面
-                RestartMFA();
- 
+                // 重新初始化数据
+                InitializeData();
+                
+                // 重新加载UI
+                LoadUI();
+                
+                Growl.Success($"预设 {selectedPreset} 加载成功");
             }
         }
     }

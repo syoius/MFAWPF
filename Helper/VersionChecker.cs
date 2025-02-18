@@ -1355,7 +1355,7 @@ public class VersionChecker
         }
     }
 
-    public string GetLatestVersionFromGithub(string owner = "SweetSmellFox", string repo = "MFAWPF")
+    public string GetLatestVersionFromGithub(string owner = "syoius", string repo = "MFAWPF")
     {
         if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repo))
             return string.Empty;

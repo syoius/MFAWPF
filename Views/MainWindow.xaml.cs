@@ -46,7 +46,7 @@ public partial class MainWindow
 
     private readonly MFAWPF.Helper.PresetManager _presetManager = new();
 
-    public MainWindow(viewModels.MainViewModel viewModel)
+    public MainWindow(ViewModels.MainViewModel viewModel)
     {
         DataSet.Data = JsonHelper.ReadFromConfigJsonFile("config", new Dictionary<string, object>());
         DataSet.MaaConfig = JsonHelper.ReadFromConfigJsonFile("maa_option", new Dictionary<string, object>());

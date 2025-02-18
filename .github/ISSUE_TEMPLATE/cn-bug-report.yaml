@@ -1,5 +1,5 @@
 name: Bug 反馈（使用中文）
-description: 运行错误、操作异常、连接错误等 
+description: 运行错误、操作异常、连接错误等
 labels: ["bug"]
 body:
   - type: checkboxes

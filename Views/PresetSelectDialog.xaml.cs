@@ -4,7 +4,7 @@ using System.Windows.Controls;
 using HandyControl.Controls;
 using MFAWPF.Controls;
 using MessageBox = HandyControl.Controls.MessageBox;
-using MFAWPF.Utils;
+using MFAWPF.Helper;
 
 namespace MFAWPF.Views;
 

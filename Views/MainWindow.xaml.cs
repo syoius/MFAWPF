@@ -44,7 +44,7 @@ public partial class MainWindow
 
     public Dictionary<string, TaskModel> TaskDictionary = new();
 
-    private readonly MFAWPF.Utils.PresetManager _presetManager = new();
+    private readonly MFAWPF.Helper.PresetManager _presetManager = new();
 
     public MainWindow()
     {

@@ -2,6 +2,7 @@ using HandyControl.Controls;
 using System.IO;
 using MFAWPF.Helper.Converters;
 using Newtonsoft.Json;
+using MFAWPF.Data;
 
 namespace MFAWPF.Helper
 {

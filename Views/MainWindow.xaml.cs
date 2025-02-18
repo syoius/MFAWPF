@@ -46,7 +46,7 @@ public partial class MainWindow
 
     private readonly MFAWPF.Helper.PresetManager _presetManager = new();
 
-    public MainWindow()
+    public MainWindow(viewModels.MainViewModel viewModel)
     {
         DataSet.Data = JsonHelper.ReadFromConfigJsonFile("config", new Dictionary<string, object>());
         DataSet.MaaConfig = JsonHelper.ReadFromConfigJsonFile("maa_option", new Dictionary<string, object>());
@@ -1640,11 +1640,7 @@ public partial class MainWindow
 
     private void ToggleWindowTopMost(object sender, RoutedPropertyChangedEventArgs<bool> e)
     {
-        if (!ViewModel.IsRunning)
-            return true;
-        var result = MessageBoxHelper.Show("ConfirmExitText".ToLocalization(),
-            "ConfirmExitTitle".ToLocalization(), buttons: MessageBoxButton.YesNo, icon: MessageBoxImage.Question);
-        return result == MessageBoxResult.Yes;
+        Topmost = e.NewValue;
     }
 
     public static void AddLogByColor(string content,

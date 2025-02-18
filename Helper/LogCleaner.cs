@@ -1,7 +1,7 @@
 using System.IO;
 using Timer = System.Timers.Timer;
 
-namespace MFAWPF.Utils;
+namespace MFAWPF.Helper;
 
 public static class LogCleaner
 {

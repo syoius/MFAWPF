@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using MFAWPF.Controls;
-using MFAWPF.Utils;
+using MFAWPF.Helper;
 using MFAWPF.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HandyControl.Tools.Command;
@@ -12,19 +12,14 @@ using Newtonsoft.Json;
 
 namespace MFAWPF.ViewModels;
 
-public class EditTaskDialogViewModel : ObservableObject
+public partial class EditTaskDialogViewModel : ViewModel
 {
-    private ObservableCollection<TaskItemViewModel>? _dataList;
-
-    public ObservableCollection<TaskItemViewModel>? DataList
-    {
-        get => _dataList;
-        set => SetProperty(ref _dataList, value);
-    }
+    [ObservableProperty]
+    private ObservableCollection<TaskItemViewModel> _dataList;
 
     private ObservableCollection<TaskItemViewModel>? _colors;
 
-    public ObservableCollection<TaskItemViewModel> Colors
+    public ObservableCollection<TaskItemViewModel>? Colors
     {
         get
         {
@@ -46,17 +41,11 @@ public class EditTaskDialogViewModel : ObservableObject
         }
         set => SetProperty(ref _colors, value);
     }
-
+    [ObservableProperty]
     private int _selectedIndex;
+    
 
-    public int SelectedIndex
-    {
-        get => _selectedIndex;
-        set =>
-            SetProperty(ref _selectedIndex, value);
-    }
-
-    public EditTaskDialog? Dialog;
+    public EditTaskDialog Dialog;
     public readonly Stack<ICommand> UndoStack = new();
     public readonly Stack<ICommand> UndoTaskStack = new();
 
@@ -86,9 +75,9 @@ public class EditTaskDialogViewModel : ObservableObject
         return operators;
     }
 
-    private TaskItemViewModel? _currentTask;
+    private TaskItemViewModel _currentTask;
 
-    public TaskItemViewModel? CurrentTask
+    public TaskItemViewModel CurrentTask
     {
         get => _currentTask;
         set
@@ -122,12 +111,12 @@ public class EditTaskDialogViewModel : ObservableObject
         if (CurrentTask != null && Dialog != null)
         {
             int index = Dialog.ListBoxDemo.Items.IndexOf(CurrentTask);
-            IDataObject? iData = Clipboard.GetDataObject();
+            IDataObject iData = Clipboard.GetDataObject();
             if (iData?.GetDataPresent(DataFormats.Text) == true)
             {
                 try
                 {
-                    Dictionary<string, TaskModel>? taskModels =
+                   var taskModels =
                         JsonConvert.DeserializeObject<Dictionary<string, TaskModel>>(
                             iData.GetData(DataFormats.Text) as string ?? string.Empty);
                     if (taskModels == null || taskModels.Count == 0)
@@ -145,13 +134,13 @@ public class EditTaskDialogViewModel : ObservableObject
                 }
                 catch (Exception exception)
                 {
-                    Console.WriteLine(exception);
+                    LoggerService.LogError(exception);
                     throw;
                 }
             }
             else
             {
-                Growls.ErrorGlobal("目前剪贴板中数据不可转换为文本");
+                GrowlHelper.ErrorGlobal("目前剪贴板中数据不可转换为文本");
             }
         }
     }
@@ -181,9 +170,9 @@ public class EditTaskDialogViewModel : ObservableObject
         }
     }
 
-    private AttributeButton? _selectedAttribute;
+    private AttributeButton _selectedAttribute;
 
-    public AttributeButton? SelectedAttribute
+    public AttributeButton SelectedAttribute
     {
         get => _selectedAttribute;
         set => SetProperty(ref _selectedAttribute, value);
@@ -225,7 +214,7 @@ public class EditTaskDialogViewModel : ObservableObject
     //             var attribute =
     //                 JsonConvert.DeserializeObject<Attribute>(
     //                     (string)iData.GetData(DataFormats.Text));
-    //             // AttributeButton? button = Dialog?.AddAttribute(attribute);
+    //             // AttributeButton button = Dialog?.AddAttribute(attribute);
     //             // if (button != null)
     //             //     UndoTaskStack.Push(new RelayCommand(_ => Dialog?.Parts.Children.Remove(button)));
     //         }

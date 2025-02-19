@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using Attribute = MFAWPF.Utils.Attribute;
+using Attribute = MFAWPF.Helper.Attribute;
 
 namespace MFAWPF.Controls;
 
@@ -26,7 +26,7 @@ public class AttributeButton : Button
         set => SetValue(IsSelectedProperty, value);
     }
 
-    public CustomWindow? WindowParent { get; init; }
+    public CustomWindow WindowParent { get; init; }
 
     static string ConvertListToString(List<List<int>> listOfLists)
     {

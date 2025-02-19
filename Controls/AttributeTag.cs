@@ -2,8 +2,8 @@
 using System.Windows.Controls;
 using HandyControl.Controls;
 using HandyControl.Data.Enum;
-using MFAWPF.Utils;
-using Attribute = MFAWPF.Utils.Attribute;
+using MFAWPF.Helper;
+using Attribute = MFAWPF.Helper.Attribute;
 
 namespace MFAWPF.Controls;
 
@@ -95,7 +95,7 @@ public class AttributeTag : Tag
         InitializeTag();
     }
 
-    public AttributeTag(Attribute? attribute)
+    public AttributeTag(Attribute attribute)
     {
         InitializeTag();
         if (attribute is not null)

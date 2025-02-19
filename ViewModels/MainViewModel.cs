@@ -5,16 +5,35 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using HandyControl.Controls;
 using HandyControl.Data;
 using HandyControl.Tools.Command;
-using MFAWPF.Utils;
+using MFAWPF.Helper;
 using System.Text.RegularExpressions;
-using System.Windows.Threading;
+using DataSet = MFAWPF.Data.DataSet;
 
 
 namespace MFAWPF.ViewModels;
 
-public class MainViewModel : ObservableObject
+public partial class MainViewModel : ViewModel
 {
     public ObservableCollection<LogItemViewModel> LogItemViewModels { get; } = new();
+
+    public void AddLog(string content,
+        string color = "",
+        string weight = "Regular",
+        bool showTime = true)
+    {
+        
+        var brush = new BrushConverter().ConvertFromString(color) as SolidColorBrush;
+        brush ??= Brushes.Gray;
+        Task.Run(() =>
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                LogItemViewModels.Add(new LogItemViewModel(content, brush, weight, "HH':'mm':'ss",
+                    showTime: showTime));
+                LoggerService.LogInfo(content);
+            });
+        });
+    }
 
     public void AddLog(string content,
         Brush? color = null,
@@ -33,7 +52,7 @@ public class MainViewModel : ObservableObject
         });
     }
 
-    public void AddLogByKey(string key, Brush? color = null, params string[]? formatArgsKeys)
+    public void AddLogByKey(string key, Brush? color = null, params string[] formatArgsKeys)
     {
         color ??= Brushes.Gray;
         Task.Run(() =>
@@ -42,53 +61,42 @@ public class MainViewModel : ObservableObject
             {
                 LogItemViewModels.Add(new LogItemViewModel(key, color, "Regular", true, "HH':'mm':'ss",
                     true, formatArgsKeys));
-                string Content = string.Empty;
-                if (formatArgsKeys == null || formatArgsKeys.Length == 0)
-                    Content = key.GetLocalizationString();
+
+                var content = string.Empty;
+                if (formatArgsKeys.Length == 0)
+                    content = key.ToLocalization();
                 else
                 {
                     // 获取每个格式化参数的本地化字符串
-                    var formatArgs = formatArgsKeys.Select(key => key.GetLocalizedFormattedString()).ToArray();
+                    var formatArgs = formatArgsKeys.Select(k => k.ToLocalizationFormatted()).ToArray();
+
                     // 使用本地化字符串更新内容
                     try
                     {
-                        Content = Regex.Unescape(
-                            key.GetLocalizedFormattedString(formatArgs.Cast<object>().ToArray()));
+                        content = Regex.Unescape(
+                            key.ToLocalizationFormatted(formatArgs.Cast<object>().ToArray()));
                     }
                     catch
                     {
-                        Content = key.GetLocalizedFormattedString(formatArgs.Cast<object>().ToArray());
+                        content = key.ToLocalizationFormatted(formatArgs.Cast<object>().ToArray());
                     }
                 }
-                LoggerService.LogInfo(Content);
+                LoggerService.LogInfo(content);
             });
         });
     }
 
     public ObservableCollection<DragItemViewModel> TaskItemViewModels { get; set; } =
-        new();
+        [];
 
     public ObservableCollection<DragItemViewModel> TasksSource { get; private set; } =
-        new();
+        [];
 
-    private bool _idle = true;
+    [ObservableProperty] private bool _idle = true;
 
-    /// <summary>
-    /// Gets or sets a value indicating whether it is idle.
-    /// </summary>
-    public bool Idle
-    {
-        get => _idle;
-        set => SetProperty(ref _idle, value);
-    }
+    [ObservableProperty] private bool _notLock = true;
 
-    private bool _notLock = true;
-
-    public bool NotLock
-    {
-        get => _notLock;
-        set => SetProperty(ref _notLock, value);
-    }
+    [ObservableProperty] private bool _isRunning = false;
 
     public void SetIdle(bool value)
     {
@@ -97,13 +105,24 @@ public class MainViewModel : ObservableObject
 
     public GongSolutions.Wpf.DragDrop.IDropTarget DropHandler { get; } = new DragDropHandler();
 
+    [ObservableProperty] private bool _isAdb = true;
 
-    private bool _isAdb = true;
+    [ObservableProperty] private bool _isConnected;
+    
+    [ObservableProperty] private bool _isUpdating;
 
-    public bool IsAdb
+    [ObservableProperty] private bool _isVisible = true;
+
+    partial void OnIsVisibleChanged(bool value)
     {
-        get => _isAdb;
-        set => SetProperty(ref _isAdb, value);
+        if (value)
+        {
+            Application.Current.MainWindow?.Show();
+        }
+        else
+        {
+            Application.Current.MainWindow?.Hide();
+        }
     }
 
     public RelayCommand<FunctionEventArgs<object>> SwitchItemCmd => new Lazy<RelayCommand<FunctionEventArgs<object>>>(
@@ -114,4 +133,182 @@ public class MainViewModel : ObservableObject
     {
         Growl.Info((info.Info as SideMenuItem)?.Header.ToString(), "InfoMessage");
     }
+
+    public static string FormatFileSize(long size)
+    {
+        string unit;
+        double value;
+        if (size >= 1024L * 1024 * 1024 * 1024)
+        {
+            value = (double)size / (1024L * 1024 * 1024 * 1024);
+            unit = "TB";
+        }
+        else if (size >= 1024 * 1024 * 1024)
+        {
+            value = (double)size / (1024 * 1024 * 1024);
+            unit = "GB";
+        }
+        else if (size >= 1024 * 1024)
+        {
+            value = (double)size / (1024 * 1024);
+            unit = "MB";
+        }
+        else if (size >= 1024)
+        {
+            value = (double)size / 1024;
+            unit = "KB";
+        }
+        else
+        {
+            value = size;
+            unit = "B";
+        }
+
+        return $"{value:F} {unit}";
+    }
+
+    public static string FormatDownloadSpeed(double speed)
+    {
+        string unit;
+        double value = speed;
+        if (value >= 1024L * 1024 * 1024 * 1024)
+        {
+            value /= 1024L * 1024 * 1024 * 1024;
+            unit = "TB/s";
+        }
+        else if (value >= 1024L * 1024 * 1024)
+        {
+            value /= 1024L * 1024 * 1024;
+            unit = "GB/s";
+        }
+        else if (value >= 1024 * 1024)
+        {
+            value /= 1024 * 1024;
+            unit = "MB/s";
+        }
+        else if (value >= 1024)
+        {
+            value /= 1024;
+            unit = "KB/s";
+        }
+        else
+        {
+            unit = "B/s";
+        }
+
+        return $"{value:F} {unit}";
+    }
+    public void OutputDownloadProgress(long value = 0, long maximum = 1, int len = 0, double ts = 1)
+    {
+        string sizeValueStr = FormatFileSize(value);
+        string maxSizeValueStr = FormatFileSize(maximum);
+        string speedValueStr = FormatDownloadSpeed(len / ts);
+
+        string progressInfo = $"[{sizeValueStr}/{maxSizeValueStr}({100 * value / maximum}%) {speedValueStr}]";
+        OutputDownloadProgress(progressInfo);
+    }
+
+    public void ClearDownloadProgress()
+    {
+        GrowlHelper.OnUIThread(() =>
+        {
+
+            if (LogItemViewModels.Count > 0 && LogItemViewModels[0].IsDownloading)
+            {
+                LogItemViewModels.RemoveAt(0);
+            }
+        });
+    }
+
+    public void OutputDownloadProgress(string output, bool downloading = true)
+    {
+
+        GrowlHelper.OnUIThread(() =>
+        {
+            var log = new LogItemViewModel(downloading ? "NewVersionFoundDescDownloading".ToLocalization() + "\n" + output : output, Application.Current.MainWindow.FindResource("DownloadLogBrush") as Brush,
+                dateFormat: "HH':'mm':'ss")
+            {
+                IsDownloading = true,
+            };
+            if (LogItemViewModels.Count > 0 && LogItemViewModels[0].IsDownloading)
+            {
+                if (!string.IsNullOrEmpty(output))
+                {
+                    LogItemViewModels[0] = log;
+                }
+                else
+                {
+                    LogItemViewModels.RemoveAt(0);
+                }
+            }
+            else if (!string.IsNullOrEmpty(output))
+            {
+                LogItemViewModels.Insert(0, log);
+            }
+        });
+    }
+
+    private string? _beforeTask = "None".ToLocalization();
+
+    public string? BeforeTask
+    {
+        get
+        {
+            _beforeTask = BeforeTaskList[DataSet.GetData("AutoStartIndex", 0)].ResourceKey;
+            return _beforeTask;
+        }
+        set => SetProperty(ref _beforeTask, value);
+    }
+
+    private string? _afterTask = "None".ToLocalization();
+
+    public string? AfterTask
+    {
+        get
+        {
+            _afterTask = AfterTaskList[DataSet.GetData("AfterTaskIndex", 0)].ResourceKey;
+            return _afterTask;
+        }
+        set => SetProperty(ref _afterTask, value);
+    }
+
+    [ObservableProperty] private List<LocalizationViewModel> _beforeTaskList =
+    [
+        new("None"),
+        new("StartupSoftware"),
+        new("StartupSoftwareAndScript"),
+    ];
+
+
+    [ObservableProperty] private List<LocalizationViewModel> _afterTaskList =
+    [
+        new("None"),
+        new("CloseMFA"),
+        new("CloseEmulator"),
+        new("CloseEmulatorAndMFA"),
+        new("ShutDown"),
+        new("CloseEmulatorAndRestartMFA"),
+        new("RestartPC"),
+    ];
+    
+    private bool _shouldTip = true;
+    private bool _isDebugMode;
+
+    public bool IsDebugMode
+    {
+        set => SetProperty(ref _isDebugMode, value);
+
+        get
+        {
+
+            _isDebugMode = MFAExtensions.IsDebugMode();
+            if (_isDebugMode && _shouldTip)
+            {
+                MessageBoxHelper.Show("DebugModeWarning".ToLocalization(), "Tip".ToLocalization(), MessageBoxButton.OK, MessageBoxImage.Warning);
+                _shouldTip = false;
+            }
+            return _isDebugMode;
+        }
+    }
+
 }

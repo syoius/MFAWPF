@@ -1,16 +1,21 @@
 using System.Text.RegularExpressions;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
-using MFAWPF.Utils;
+using MFAWPF.Helper;
 
 namespace MFAWPF.ViewModels
 {
-    public class LogItemViewModel : ObservableObject
+    public class LogItemViewModel : ViewModel
     {
-        private readonly string[]? _formatArgsKeys;
+        private readonly string[] _formatArgsKeys;
 
-        public LogItemViewModel(string resourceKey, Brush color, string weight = "Regular", bool useKey = false,
-            string dateFormat = "MM'-'dd'  'HH':'mm':'ss", bool showTime = true, params string[]? formatArgsKeys)
+        public LogItemViewModel(string resourceKey,
+            Brush color,
+            string weight = "Regular",
+            bool useKey = false,
+            string dateFormat = "MM'-'dd'  'HH':'mm':'ss",
+            bool showTime = true,
+            params string[] formatArgsKeys)
         {
             _resourceKey = resourceKey;
 
@@ -24,26 +29,28 @@ namespace MFAWPF.ViewModels
                 UpdateContent();
 
                 // 订阅语言切换事件
-                LanguageManager.LanguageChanged += OnLanguageChanged;
+                LanguageHelper.LanguageChanged += OnLanguageChanged;
             }
             else
                 Content = resourceKey;
         }
 
-        public LogItemViewModel(string content, Brush color, string weight = "Regular",
-            string dateFormat = "MM'-'dd'  'HH':'mm':'ss", bool showTime = true)
+        public LogItemViewModel(string content,
+            Brush color,
+            string weight = "Regular",
+            string dateFormat = "MM'-'dd'  'HH':'mm':'ss",
+            bool showTime = true)
         {
             Time = DateTime.Now.ToString(dateFormat);
             Color = color;
             Weight = weight;
             ShowTime = showTime;
-
             Content = content;
         }
 
-        private string? _time;
+        private string _time;
 
-        public string? Time
+        public string Time
         {
             get => _time;
             set => SetProperty(ref _time, value);
@@ -57,17 +64,17 @@ namespace MFAWPF.ViewModels
             set => SetProperty(ref _showTime, value);
         }
 
-        private string? _content;
+        private string _content;
 
-        public string? Content
+        public string Content
         {
             get => _content;
             set => SetProperty(ref _content, value);
         }
 
-        private Brush? _color;
+        private Brush _color;
 
-        public Brush? Color
+        public Brush Color
         {
             get => _color;
             set => SetProperty(ref _color, value);
@@ -81,9 +88,9 @@ namespace MFAWPF.ViewModels
             set => SetProperty(ref _weight, value);
         }
 
-        private string? _resourceKey;
+        private string _resourceKey;
 
-        public string? ResourceKey
+        public string ResourceKey
         {
             get => _resourceKey;
             set
@@ -98,26 +105,33 @@ namespace MFAWPF.ViewModels
         private void UpdateContent()
         {
             if (_formatArgsKeys == null || _formatArgsKeys.Length == 0)
-                Content = ResourceKey.GetLocalizationString();
+                Content = ResourceKey.ToLocalization();
             else
             {
                 // 获取每个格式化参数的本地化字符串
-                var formatArgs = _formatArgsKeys.Select(key => key.GetLocalizedFormattedString()).ToArray();
+                var formatArgs = _formatArgsKeys.Select(key => key.ToLocalizationFormatted()).ToArray();
 
                 // 使用本地化字符串更新内容
                 try
                 {
                     Content = Regex.Unescape(
-                        _resourceKey.GetLocalizedFormattedString(formatArgs.Cast<object>().ToArray()));
+                        _resourceKey.ToLocalizationFormatted(formatArgs.Cast<object>().ToArray()));
                 }
                 catch
                 {
-                    Content = _resourceKey.GetLocalizedFormattedString(formatArgs.Cast<object>().ToArray());
+                    Content = _resourceKey.ToLocalizationFormatted(formatArgs.Cast<object>().ToArray());
                 }
             }
         }
+        private bool _isDownloading;
 
-        private void OnLanguageChanged(object? sender, EventArgs e)
+        public bool IsDownloading
+        {
+            get => _isDownloading;
+            set => SetProperty(ref _isDownloading, value);
+        }
+
+        private void OnLanguageChanged(object sender, EventArgs e)
         {
             UpdateContent();
         }

@@ -64,6 +64,7 @@
 {
   "name": "项目名称", //默认为null
   "version":  "项目版本", //默认为null
+  "mirrorchyan_rid":  "项目ID(从Mirror酱下载的必要字段)", //默认为null , 比如 M9A
   "url":  "项目链接(目前应该只支持Github)", //默认为null , 比如 https://github.com/{Github账户}/{Github项目}
   "custom_title": "自定义标题", //默认为null, 使用该字段后，标题栏将只显示custom_title和version
   "default_controller": "adb", //默认为adb, 启动后的默认控制器，可选项 adb , win32
@@ -85,7 +86,7 @@
     {
       "name": "任务",
       "entry": "任务接口",
-      "checked": true,  //默认为false，任务默认是否被选中
+      "check": true,  //默认为false，任务默认是否被选中
       "doc": "文档介绍",  //默认为null，显示在任务设置选项底下，可支持富文本，格式在下方
       "repeatable": true,  //默认为false，任务可不可以重复运行
       "repeat_count": 1,  //任务默认重复运行次数，需要repeatable为true
@@ -121,8 +122,9 @@
 - 内置 MFATools 可以用来裁剪图片和获取 ROI
 - 目前一些地方并没有特别完善,欢迎各位大佬贡献代码
 - 注意，由于 `MaaFramework` 于 2.0 移除了 Exec Agent，所以目前无法通过注册 interface 注册 Custom Action 和 Custom Recognition
+- `MFAWPF` 于 v1.2.3.3 加入动态注册 Custom Action 和 Custom Recognition 的功能，目前只支持 C#,需要在 Resource 目录的 custom 下放置相应的.cs 文件, 参考 [文档](./docs/zh_cn/自定义识别_操作.md)
 - 在 exe 同级目录中放置 `logo.ico` 后可以替换窗口的图标
-- MFAWPF 新增 interface 多语言支持,在 interface.json 同目录下新建 zh-cn.json 和 en-us.json 后，doc 和任务的 name 和选项的 name 可以使用 key 来指代。MFAWPF 会自动根据语言来读取文件的 key 对应的 value。如果没有则默认为 key
+- `MFAWPF` 新增 interface 多语言支持,在`interface.json`同目录下新建`zh-cn.json`,`zh-tw.json`和`en-us.json`后，doc 和任务的 name 和选项的 name 可以使用 key 来指代。MFAWPF 会自动根据语言来读取文件的 key 对应的 value。如果没有则默认为 key
 
 **注：在 MFA 中，于 Pipeline 中任务新增了俩个属性字段，分别为 `focus_tip` 和 `focus_tip_color`。**
 
@@ -140,7 +142,7 @@
 - [MaaFramework](https://github.com/MaaAssistantArknights/MaaFramework)：自动化测试框架
 - [MaaFramework.Binding.CSharp](https://github.com/MaaXYZ/MaaFramework.Binding.CSharp)：MaaFramework 的 C# 包装
 - [HandyControls](https://github.com/ghost1372/HandyControls)：C# WPF 控件库
-- [NLog](https://github.com/NLog/NLog)：C# 日志记录库
+- [Serilog](https://github.com/serilog/serilog)：C# 日志记录库
 - [Newtonsoft.Json](https://github.com/CommunityToolkit/dotnet)：C# JSON 库
 
 ## 画大饼

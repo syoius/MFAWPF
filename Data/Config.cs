@@ -1,5 +1,5 @@
 using MaaFramework.Binding;
-using MFAWPF.Utils;
+using MFAWPF.Helper;
 
 namespace MFAWPF.Data;
 
@@ -8,11 +8,11 @@ public class Config
     public AdbDeviceCoreConfig AdbDevice { get; set; } = new();
     public DesktopWindowCoreConfig DesktopWindow { get; set; } = new();
     public string BasePath = MaaProcessor.ResourceBase;
-    public bool IsConnected = false;
 }
 
 public class DesktopWindowCoreConfig
 {
+    public string Name { get; set; } = string.Empty;
     public nint HWnd { get; set; }
 
     public Win32InputMethod Input { get; set; } = Win32InputMethod.Seize;

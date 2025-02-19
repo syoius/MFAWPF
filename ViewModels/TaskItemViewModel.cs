@@ -1,10 +1,11 @@
-﻿using MFAWPF.Utils;
+
+using MFAWPF.Helper;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
 
 namespace MFAWPF.ViewModels;
 
-public class TaskItemViewModel : ObservableObject
+public class TaskItemViewModel : ViewModel
 {
     private string _name = "未命名";
 
@@ -19,12 +20,12 @@ public class TaskItemViewModel : ObservableObject
         }
     }
 
-    private TaskModel? _task;
+    private TaskModel _task;
 
     /// <summary>
     /// Gets or sets the time.
     /// </summary>
-    public TaskModel? Task
+    public TaskModel Task
     {
         get => _task;
         set
@@ -45,7 +46,10 @@ public class TaskItemViewModel : ObservableObject
         };
         Dictionary<string, TaskModel> taskModels = new Dictionary<string, TaskModel>();
         if (Task != null)
+        {
             taskModels.Add(Name, Task);
+        }
+
         return JsonConvert.SerializeObject(taskModels, settings);
     }
 

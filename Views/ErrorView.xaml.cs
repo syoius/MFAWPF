@@ -66,7 +66,7 @@ public partial class ErrorView : INotifyPropertyChanged
         // ErrorQqGroupLink.Visibility = isZhCn ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public event PropertyChangedEventHandler PropertyChanged;
 
     protected override void OnClosed(EventArgs e)
     {
@@ -80,7 +80,10 @@ public partial class ErrorView : INotifyPropertyChanged
 
     private void Hyperlink_OnClick(object sender, RoutedEventArgs _)
     {
-        Process.Start(new ProcessStartInfo(((Hyperlink)sender).NavigateUri.AbsoluteUri) { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo(((Hyperlink)sender).NavigateUri.AbsoluteUri)
+        {
+            UseShellExecute = true
+        });
     }
 
     private void CopyToClipboard()
@@ -108,11 +111,12 @@ public partial class ErrorView : INotifyPropertyChanged
         }
     }
 
-    private async void CopyErrorMessage_Click(object sender, RoutedEventArgs e)
+    async private void CopyErrorMessage_Click(object sender, RoutedEventArgs e)
     {
         CopyToClipboard();
         CopiedTip.IsOpen = true;
         await Task.Delay(3000);
         CopiedTip.IsOpen = false;
     }
-}
+    
+   }

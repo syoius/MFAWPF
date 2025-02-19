@@ -129,39 +129,61 @@ namespace MFAWPF.Helper
                 // 读取预设文件内容
                 string presetContent = await File.ReadAllTextAsync(presetPath);
                 LoggerService.LogInfo("已读取预设文件内容");
+                LoggerService.LogInfo($"预设内容: {presetContent}");
                 
-                // 解析预设内容
-                var presetData = JsonConvert.DeserializeObject<Dictionary<string, object>>(presetContent);
-                if (presetData == null)
-                {
-                    throw new Exception("预设文件格式无效");
-                }
-
                 // 写入到 config.json
                 string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "config.json");
                 LoggerService.LogInfo($"写入预设到配置文件: {configPath}");
+                
+                // 确保文件写入完成
                 await File.WriteAllTextAsync(configPath, presetContent);
                 
-                // 更新 DataSet.Data
-                DataSet.Data = presetData;
+                // 验证文件写入
+                string verifyContent = await File.ReadAllTextAsync(configPath);
+                LoggerService.LogInfo($"验证配置文件内容: {verifyContent}");
+                
+                // 强制等待文件写入
+                await Task.Delay(200);
                 
                 // 从预设内容反序列化 MaaInterface 实例
                 var maaInterface = JsonConvert.DeserializeObject<MaaInterface>(presetContent);
-                LoggerService.LogInfo("预设加载成功");
-                
-                // 刷新 TaskItems
-                if (presetData.ContainsKey("TaskItems"))
+                if (maaInterface == null)
                 {
-                    var taskItems = JsonConvert.DeserializeObject<List<TaskInterfaceItem>>(
-                        presetData["TaskItems"].ToString() ?? "[]");
-                    DataSet.SetData("TaskItems", taskItems);
+                    throw new Exception("预设内容无法转换为 MaaInterface 对象");
+                }
+
+                // 确保 Task 列表不为空
+                if (maaInterface.Task == null)
+                {
+                    maaInterface.Task = new List<TaskInterfaceItem>();
+                }
+
+                // 更新 DataSet
+                var presetData = JsonConvert.DeserializeObject<Dictionary<string, object>>(presetContent);
+                if (presetData != null)
+                {
+                    DataSet.Data = presetData;
+                    
+                    // 如果预设中包含任务列表，更新 TaskItems
+                    if (presetData.ContainsKey("TaskItems"))
+                    {
+                        var taskItems = JsonConvert.DeserializeObject<List<TaskInterfaceItem>>(
+                            presetData["TaskItems"].ToString() ?? "[]");
+                        if (taskItems != null)
+                        {
+                            maaInterface.Task = taskItems;
+                            DataSet.SetData("TaskItems", taskItems);
+                        }
+                    }
                 }
                 
+                LoggerService.LogInfo($"成功加载任务数量: {maaInterface.Task?.Count ?? 0}");
                 return maaInterface;
             }
             catch (Exception ex)
             {
                 LoggerService.LogError($"加载预设失败: {ex.Message}");
+                LoggerService.LogError($"异常堆栈: {ex.StackTrace}");
                 Growl.Error($"加载预设失败: {ex.Message}");
                 return null;
             }

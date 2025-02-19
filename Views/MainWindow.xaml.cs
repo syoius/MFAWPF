@@ -774,10 +774,44 @@ public partial class MainWindow
     // }
 
 
-    public void RestartMFA()
+    public async Task RestartMFA()
     {
-        Process.Start(Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty);
-        GrowlHelper.OnUIThread(Application.Current.Shutdown);
+        try 
+        {
+            LoggerService.LogInfo("准备重启应用程序");
+            
+            // 确保所有数据都已写入
+            await Task.Delay(500);
+            
+            // 获取当前进程路径
+            string processPath = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+            if (string.IsNullOrEmpty(processPath))
+            {
+                throw new Exception("无法获取应用程序路径");
+            }
+            
+            // 启动新进程
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = processPath,
+                UseShellExecute = true
+            };
+            
+            LoggerService.LogInfo("启动新进程");
+            Process.Start(startInfo);
+            
+            // 等待一段时间确保新进程启动
+            await Task.Delay(1000);
+            
+            // 关闭当前进程
+            LoggerService.LogInfo("关闭当前进程");
+            GrowlHelper.OnUIThread(Application.Current.Shutdown);
+        }
+        catch (Exception ex)
+        {
+            LoggerService.LogError($"重启应用程序时发生错误: {ex.Message}");
+            Growl.Error($"重启失败: {ex.Message}");
+        }
     }
 
     private void AddResourcesOption(Panel panel = null, int defaultValue = 0)
@@ -1879,30 +1913,43 @@ public partial class MainWindow
 
     private async void LoadPreset(object sender, RoutedEventArgs e)
     {
-        var presets = _presetManager.GetPresetNames();
-        if (!presets.Any())
+        try
         {
-            Growl.Warning("没有可用的预设");
-            return;
-        }
-
-        var dialog = new PresetSelectDialog(presets);
-        if (dialog.ShowDialog() == true && dialog.SelectedPreset != null)
-        {
-            string selectedPreset = dialog.SelectedPreset;
-            var maaInterface = await _presetManager.LoadPreset(selectedPreset);
-            if (maaInterface != null)
+            var presets = _presetManager.GetPresetNames();
+            if (!presets.Any())
             {
-                MaaInterface.Instance = maaInterface;
-                
-                // 重新初始化数据
-                InitializeData();
-                
-                // 重新加载UI
-                LoadUI();
-                
-                Growl.Success($"预设 {selectedPreset} 加载成功");
+                Growl.Warning("没有可用的预设");
+                return;
             }
+
+            var dialog = new PresetSelectDialog(presets);
+            if (dialog.ShowDialog() == true && dialog.SelectedPreset != null)
+            {
+                string selectedPreset = dialog.SelectedPreset;
+                LoggerService.LogInfo($"开始加载预设: {selectedPreset}");
+                
+                var maaInterface = await _presetManager.LoadPreset(selectedPreset);
+                if (maaInterface != null)
+                {
+                    LoggerService.LogInfo("设置 MaaInterface.Instance");
+                    MaaInterface.Instance = maaInterface;
+                    
+                    LoggerService.LogInfo("等待文件系统操作完成");
+                    await Task.Delay(500);
+                    
+                    LoggerService.LogInfo("重启应用程序");
+                    await RestartMFA();
+                }
+                else
+                {
+                    LoggerService.LogError("加载预设失败：MaaInterface 为空");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerService.LogError($"加载预设时发生异常: {ex}");
+            Growl.Error($"加载预设失败: {ex.Message}");
         }
     }
 }

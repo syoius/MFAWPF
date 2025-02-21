@@ -129,11 +129,21 @@
 **注：在 MFA 中，于 Pipeline 中任务新增了俩个属性字段，分别为 `focus_tip` 和 `focus_tip_color`。**
 
 - `focus` : _bool_  
-  是否启用`focus_tip`。可选，默认 false。
+  是否启用`focus_tip` 、`focus_succeeded`、 `focus_failed`、 `focus_toast`。可选，默认 false。
+- `focus_toast` : _string_  
+  当执行某任务前，Windows 弹窗输出的内容。可选，默认空。
 - `focus_tip` : _string_ | _list<string, >_  
-  当执行某任务时，在 MFA 右侧日志输出的内容。可选，默认空。
+  当执行某任务前，在 MFA 右侧日志输出的内容。可选，默认空。
 - `focus_tip_color` : _string_ | _list<string, >_  
-  当执行某任务时，在 MFA 右侧日志输出的内容的颜色。可选，默认为 Gray。
+  当执行某任务前，在 MFA 右侧日志输出的内容的颜色。可选，默认为 Gray。
+- `focus_succeeded` : _string_ | _list<string, >_  
+  当执行某任务成功后，在 MFA 右侧日志输出的内容。可选，默认空。
+- `focus_succeeded_color` : _string_ | _list<string, >_  
+  当执行某任务成功后，在 MFA 右侧日志输出的内容的颜色。可选，默认为 Gray。
+- `focus_failed` : _string_ | _list<string, >_  
+  当执行某任务失败时，在 MFA 右侧日志输出的内容。可选，默认空。
+- `focus_failed_color` : _string_ | _list<string, >_  
+  当执行某任务失败时，在 MFA 右侧日志输出的内容的颜色。可选，默认为 Gray。
 
 ## 致谢
 

@@ -113,7 +113,7 @@ public class VersionChecker
                 CheckForGUIUpdates();
                 break;
             case 1:
-                CheckForGuiUpdatesWithMirrorApi();
+                CheckGuiVersionWithMirrorApi();
                 break;
         }
     }
@@ -144,7 +144,7 @@ public class VersionChecker
     {
         MainWindow.Instance.SetUpdating(true);
         DownloadDialog dialog = null;
-        GrowlHelper.OnUIThread(() =>
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (!noDialog) dialog = new DownloadDialog("UpdateResource".ToLocalization());
             dialog?.Show();
@@ -154,7 +154,7 @@ public class VersionChecker
         if (string.IsNullOrEmpty(resid))
         {
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             return;
         }
 
@@ -168,7 +168,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("CurrentResourcesNotSupportMirror".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -176,7 +176,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetCurrentVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -200,7 +200,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetLatestVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -210,7 +210,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("ResourcesAreLatestVersion".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             action?.Invoke();
             return;
@@ -237,7 +237,7 @@ public class VersionChecker
         if (!await DownloadFileAsync(downloadUrl, tempZipFilePath, dialog, "GameResourceUpdated"))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             return;
         }
 
@@ -249,7 +249,7 @@ public class VersionChecker
         if (!File.Exists(tempZipFilePath))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             return;
         }
 
@@ -264,11 +264,32 @@ public class VersionChecker
             resourceDirPath = Path.Combine(tempExtractDir, "assets", "resource");
         }
 
+        var wpfDir = AppContext.BaseDirectory;
+        var changesPath = Path.Combine(tempExtractDir, "changes.json");
+        if (File.Exists(changesPath))
+        {
+            var changes = await File.ReadAllTextAsync(changesPath);
+            try
+            {
+                var changesJson = JsonConvert.DeserializeObject<MirrorChangesJson>(changes);
+                if (changesJson?.Deleted != null)
+                {
+                    var delPaths = changesJson.Deleted
+                        .Select(del => Path.Combine(AppContext.BaseDirectory, del))
+                        .Where(File.Exists);
 
-        var resourcePath = Path.Combine(AppContext.BaseDirectory, "resource");
-        if (Directory.Exists(resourcePath))
-            Directory.Delete(resourcePath, true);
-        string wpfDir = AppContext.BaseDirectory;
+                    foreach (var delPath in delPaths)
+                    {
+                        File.Delete(delPath);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerService.LogError(e);
+            }
+        }
+
         var file = new FileInfo(interfacePath);
         if (file.Exists)
         {
@@ -278,10 +299,29 @@ public class VersionChecker
 
         dialog?.UpdateProgress(60);
 
+        var resourcePath = Path.Combine(wpfDir, "resource");
+        if (Directory.Exists(resourcePath))
+            Directory.Delete(resourcePath, true);
+
         var di = new DirectoryInfo(resourceDirPath);
         if (di.Exists)
         {
             CopyFolder(resourceDirPath, Path.Combine(wpfDir, "resource"));
+        }
+
+        // 复制presets目录
+        var presetsDirPath = Path.Combine(tempExtractDir, "presets");
+        var presetsDi = new DirectoryInfo(presetsDirPath);
+        if (presetsDi.Exists)
+        {
+            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "presets"));
+        }
+
+        // 删除config文件夹
+        var configDirPath = Path.Combine(wpfDir, "config");
+        if (Directory.Exists(configDirPath))
+        {
+            Directory.Delete(configDirPath, true);
         }
 
         dialog?.UpdateProgress(70);
@@ -289,9 +329,12 @@ public class VersionChecker
             File.Delete(tempZipFilePath);
         if (Directory.Exists(tempExtractDir))
             Directory.Delete(tempExtractDir, true);
+        if (Directory.Exists(tempPath))
+            Directory.Delete(tempPath, true);
         dialog?.UpdateProgress(80);
 
         var newInterfacePath = Path.Combine(wpfDir, "interface.json");
+
         if (File.Exists(newInterfacePath))
         {
             var jsonContent = await File.ReadAllTextAsync(newInterfacePath);
@@ -320,7 +363,6 @@ public class VersionChecker
 
         try
         {
-            var settingsView = App.Services.GetRequiredService<SettingsView>();
             SettingsView.ViewModel.ResourceVersion = latestVersion;
         }
         catch (Exception e)
@@ -333,7 +375,8 @@ public class VersionChecker
 
         MainWindow.Instance.SetUpdating(false);
 
-        GrowlHelper.OnUIThread(() =>
+
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (closeDialog) dialog?.Close();
             if (noDialog)
@@ -341,72 +384,48 @@ public class VersionChecker
                 if (MessageBoxHelper.Show("GameResourceUpdated".ToLocalization(), buttons: MessageBoxButton.YesNo, icon: MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     Process.Start(Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty);
-                    GrowlHelper.OnUIThread(Application.Current.Shutdown);
+                    DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
                 }
             }
         });
-
-        DataSet.SetData("TaskItems", new List<DragItemViewModel>());
-        MainWindow.Instance.InitializeData();
+        DispatcherHelper.RunOnMainThread(() => MainWindow.Instance.ConnectSettingButton.IsChecked = true);
+        var tasks = MainWindow.ViewModel.TaskItemViewModels;
+        MainWindow.Instance.ClearTasks(() => MainWindow.Instance.InitializeData(dragItem:tasks));
         action?.Invoke();
     }
 
     public void CheckResourceVersionWithMirrorApi()
     {
-        MainWindow.Instance.SetUpdating(true);
-
-        var resId = GetResourceID();
-        var currentVersion = GetResourceVersion();
-        var cdk = SimpleEncryptionHelper.Decrypt(DataSet.GetData("DownloadCDK", string.Empty));
-        var userAgent = "MFA";
-
-        var apiUrl = $"https://mirrorchyan.com/api/resources/{resId}/latest?current_version={currentVersion}&cdk={cdk}&user_agent={userAgent}";
-
-        if (string.IsNullOrWhiteSpace(resId))
-        {
-            ToastNotification.ShowDirect("CurrentResourcesNotSupportMirror".ToLocalization());
-            return;
-        }
         try
         {
-            using var httpClient = new HttpClient();
-            var response = httpClient.GetAsync(apiUrl).Result;
-            response.EnsureSuccessStatusCode();
-
-            var jsonResponse = response.Content.ReadAsStringAsync().Result;
-            var responseData = JObject.Parse(jsonResponse);
-
-            if ((int)responseData["code"] == 0)
+            MainWindow.Instance.SetUpdating(true);
+            var resId = GetResourceID();
+            if (string.IsNullOrWhiteSpace(resId))
             {
-                var data = responseData["data"];
-                var versionName = data["version_name"]?.ToString();
+                ToastNotification.ShowDirect("CurrentResourcesNotSupportMirror".ToLocalization());
 
-                if (!string.IsNullOrEmpty(versionName))
-                {
-                    var localVersion = GetResourceVersion();
-                    if (IsNewVersionAvailable(versionName, localVersion))
-                    {
-                        ToastNotification.ShowDirect("ResourceOption".ToLocalization() + "NewVersionAvailableLatestVersion".ToLocalization() + versionName);
-                    }
-                    else
-                    {
-                        ToastNotification.ShowDirect("ResourcesAreLatestVersion".ToLocalization());
-                    }
-                }
-                else
-                {
-                    ToastNotification.ShowDirect("FailToGetLatestVersionInfo".ToLocalization());
-                }
+                return;
+            }
+            var currentVersion = GetLocalVersion();
+            var cdk = SimpleEncryptionHelper.Decrypt(DataSet.GetData("DownloadCDK", string.Empty));
+
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "MFA", true, true);
+
+            if (IsNewVersionAvailable(latestVersion, currentVersion))
+            {
+                ToastNotification.ShowDirect("ResourceOption".ToLocalization() + "NewVersionAvailableLatestVersion".ToLocalization() + latestVersion);
             }
             else
             {
-                GrowlHelper.ErrorGlobal($"{"FailToGetLatestVersionInfo".ToLocalization()}: {responseData["msg"]}");
+                ToastNotification.ShowDirect("ResourcesAreLatestVersion".ToLocalization());
             }
+
+            MainWindow.Instance.SetUpdating(false);
         }
         catch (Exception ex)
         {
-            MainWindow.Instance.SetUpdating(false);
             ToastNotification.ShowDirect($"{"FailToGetLatestVersionInfo".ToLocalization()}: {ex.Message}");
+            MainWindow.Instance.SetUpdating(false);
             LoggerService.LogError(ex);
         }
         finally
@@ -419,7 +438,7 @@ public class VersionChecker
     {
         MainWindow.Instance.SetUpdating(true);
         DownloadDialog dialog = null;
-        GrowlHelper.OnUIThread(() =>
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (!noDialog) dialog = new DownloadDialog("UpdateResource".ToLocalization());
             dialog?.Show();
@@ -429,7 +448,7 @@ public class VersionChecker
         if (string.IsNullOrEmpty(url))
         {
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             return;
         }
 
@@ -456,7 +475,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetLatestVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -467,7 +486,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetCurrentVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -476,7 +495,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("ResourcesAreLatestVersion".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             action?.Invoke();
             return;
@@ -515,7 +534,7 @@ public class VersionChecker
         if (!await DownloadFileAsync(downloadUrl, tempZipFilePath, dialog, "GameResourceUpdated"))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             return;
         }
 
@@ -527,17 +546,17 @@ public class VersionChecker
         if (!File.Exists(tempZipFilePath))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             return;
         }
 
         ZipFile.ExtractToDirectory(tempZipFilePath, tempExtractDir);
         dialog?.UpdateProgress(50);
-        
+
         var resourcePath = Path.Combine(AppContext.BaseDirectory, "resource");
         if (Directory.Exists(resourcePath))
             Directory.Delete(resourcePath, true);
-        
+
         var interfacePath = Path.Combine(tempExtractDir, "interface.json");
         var resourceDirPath = Path.Combine(tempExtractDir, "resource");
 
@@ -555,6 +574,21 @@ public class VersionChecker
         if (di.Exists)
         {
             CopyFolder(resourceDirPath, Path.Combine(wpfDir, "resource"));
+        }
+
+        // 复制presets目录
+        var presetsDirPath = Path.Combine(tempExtractDir, "presets");
+        var presetsDi = new DirectoryInfo(presetsDirPath);
+        if (presetsDi.Exists)
+        {
+            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "presets"));
+        }
+
+        // 删除config文件夹
+        var configDirPath = Path.Combine(wpfDir, "config");
+        if (Directory.Exists(configDirPath))
+        {
+            Directory.Delete(configDirPath, true);
         }
 
         dialog?.UpdateProgress(70);
@@ -601,8 +635,15 @@ public class VersionChecker
         dialog?.SetRestartButtonVisibility(true);
 
         MainWindow.Instance.SetUpdating(false);
-
-        GrowlHelper.OnUIThread(() =>
+        try
+        {
+            SettingsView.ViewModel.ResourceVersion = latestVersion;
+        }
+        catch (Exception e)
+        {
+            LoggerService.LogError(e);
+        }
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (closeDialog) dialog?.Close();
             if (noDialog)
@@ -610,22 +651,14 @@ public class VersionChecker
                 if (MessageBoxHelper.Show("GameResourceUpdated".ToLocalization(), buttons: MessageBoxButton.YesNo, icon: MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     Process.Start(Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty);
-                    GrowlHelper.OnUIThread(Application.Current.Shutdown);
+                    DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
                 }
             }
         });
 
-        DataSet.SetData("TaskItems", new List<DragItemViewModel>());
-        try
-        {
-            var settingsView = App.Services.GetRequiredService<SettingsView>();
-            SettingsView.ViewModel.ResourceVersion = latestVersion;
-        }
-        catch (Exception e)
-        {
-            LoggerService.LogError(e);
-        }
-        MainWindow.Instance.InitializeData();
+        DispatcherHelper.RunOnMainThread(() => MainWindow.Instance.ConnectSettingButton.IsChecked = true);
+        var tasks = MainWindow.ViewModel.TaskItemViewModels;
+        MainWindow.Instance.ClearTasks(() => MainWindow.Instance.InitializeData(dragItem:tasks));
         action?.Invoke();
     }
 
@@ -634,7 +667,7 @@ public class VersionChecker
         MainWindow.Instance.SetUpdating(true);
 
         DownloadDialog dialog = null;
-        GrowlHelper.OnUIThread(() =>
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (!noDialog) dialog = new DownloadDialog("UpdateMaaFW".ToLocalization());
             dialog?.Show();
@@ -668,7 +701,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetLatestVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -678,7 +711,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetCurrentVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -688,7 +721,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("MaaFwIsLatestVersion".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -699,7 +732,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetDownloadUrl".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -714,7 +747,7 @@ public class VersionChecker
         if (!await DownloadFileAsync(downloadUrl, tempZipFilePath, dialog, "GameResourceUpdated"))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -724,7 +757,7 @@ public class VersionChecker
         if (!File.Exists(tempZipFilePath))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -758,14 +791,14 @@ public class VersionChecker
         };
         Process.Start(psi);
         Thread.Sleep(50);
-        GrowlHelper.OnUIThread(Application.Current.Shutdown);
+        DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
     }
     async public void UpdateMFAWithMirrorApi(bool noDialog = false)
     {
         MainWindow.Instance.SetUpdating(true);
 
         DownloadDialog dialog = null;
-        GrowlHelper.OnUIThread(() =>
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (!noDialog) dialog = new DownloadDialog("SoftwareUpdate".ToLocalization());
             dialog?.Show();
@@ -800,7 +833,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetLatestVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -810,7 +843,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetCurrentVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -819,7 +852,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("MFAIsLatestVersion".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -830,7 +863,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetDownloadUrl".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -845,7 +878,7 @@ public class VersionChecker
         if (!await DownloadFileAsync(downloadUrl, tempZipFilePath, dialog, "GameResourceUpdated"))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -855,7 +888,7 @@ public class VersionChecker
         if (!File.Exists(tempZipFilePath))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -893,7 +926,7 @@ public class VersionChecker
         };
         Process.Start(psi);
         Thread.Sleep(50);
-        GrowlHelper.OnUIThread(Application.Current.Shutdown);
+        DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
     }
 
     async public void UpdateMFA(bool noDialog = false)
@@ -901,7 +934,7 @@ public class VersionChecker
         MainWindow.Instance.SetUpdating(true);
 
         DownloadDialog dialog = null;
-        GrowlHelper.OnUIThread(() =>
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (!noDialog) dialog = new DownloadDialog("SoftwareUpdate".ToLocalization());
             dialog?.Show();
@@ -933,7 +966,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetLatestVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -944,7 +977,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetCurrentVersionInfo".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -953,7 +986,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("MFAIsLatestVersion".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -967,7 +1000,7 @@ public class VersionChecker
         {
             SetText($"{"FailToGetDownloadUrl".ToLocalization()}: {ex.Message}", dialog, noDialog);
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             LoggerService.LogError(ex);
             return;
@@ -979,7 +1012,7 @@ public class VersionChecker
         {
             ToastNotification.ShowDirect("FailToGetDownloadUrl".ToLocalization());
             MainWindow.Instance.SetUpdating(false);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -994,7 +1027,7 @@ public class VersionChecker
         if (!await DownloadFileAsync(downloadUrl, tempZipFilePath, dialog, "GameResourceUpdated"))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -1004,7 +1037,7 @@ public class VersionChecker
         if (!File.Exists(tempZipFilePath))
         {
             SetText("DownloadFailed", dialog, noDialog);
-            GrowlHelper.OnUIThread(() => dialog?.Close());
+            DispatcherHelper.RunOnMainThread(() => dialog?.Close());
             MainWindow.ViewModel.ClearDownloadProgress();
             return;
         }
@@ -1042,7 +1075,7 @@ public class VersionChecker
         };
         Process.Start(psi);
         Thread.Sleep(50);
-        GrowlHelper.OnUIThread(Application.Current.Shutdown);
+        DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
     }
 
     private static void CopyFolder(string sourceFolder, string destinationFolder)
@@ -1067,19 +1100,29 @@ public class VersionChecker
         }
     }
 
-    private void GetDownloadUrlFromMirror(string version, string resId, string cdk, out string url, out string latest_version, string userAgent = "MFA", bool isUI = false)
+    private void GetDownloadUrlFromMirror(string version, string resId, string cdk, out string url, out string latestVersion, string userAgent = "MFA", bool isUI = false, bool onlyCheck = false)
     {
-
+        var cdkD = onlyCheck ? string.Empty : $"cdk={cdk}&";
         var releaseUrl = isUI
-            ? $"https://mirrorchyan.com/api/resources/{resId}/latest?current_version={version}&cdk={cdk}&os=win&arch=x86_64"
-            : $"https://mirrorchyan.com/api/resources/{resId}/latest?cdk={cdk}&user_agent={userAgent}";
+            ? $"https://mirrorchyan.com/api/resources/{resId}/latest?current_version={version}&{cdkD}os=win&arch=x86_64"
+            : $"https://mirrorchyan.com/api/resources/{resId}/latest?current_version={version}&{cdkD}user_agent={userAgent}";
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd("request");
         httpClient.DefaultRequestHeaders.Accept.TryParseAdd("application/json");
         try
         {
             var response = httpClient.GetAsync(releaseUrl).Result;
-            response.EnsureSuccessStatusCode();
+            try
+            {
+                response.EnsureSuccessStatusCode();
+            }
+            catch (HttpRequestException ex)
+            {
+                if ((int)response.StatusCode == 403)
+                {
+                    throw new Exception("MirrorUseLimitReached".ToLocalization());
+                }
+            }
 
             var read = response.Content.ReadAsStringAsync();
             read.Wait();
@@ -1092,7 +1135,7 @@ public class VersionChecker
                 var versionName = data["version_name"]?.ToString();
                 var downloadUrl = data["url"]?.ToString();
                 url = downloadUrl;
-                latest_version = versionName;
+                latestVersion = versionName;
             }
             else
             {
@@ -1166,55 +1209,82 @@ public class VersionChecker
     {
         try
         {
-            using var client = new WebClient();
-            client.Headers[HttpRequestHeader.UserAgent] = "request";
-            client.Headers[HttpRequestHeader.Accept] = "application/json";
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("request");
+            httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+
+            using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
 
             var startTime = DateTime.Now;
             long totalBytesRead = 0;
             long bytesPerSecond = 0;
-            long totalBytes = 0;
+            long? totalBytes = response.Content.Headers.ContentLength;
 
-            client.DownloadProgressChanged += (_, e) =>
+            await using var contentStream = await response.Content.ReadAsStreamAsync();
+            await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+
+            var buffer = new byte[8192];
+            var stopwatch = Stopwatch.StartNew();
+            var lastUpdateTime = DateTime.Now;
+
+            while (true)
             {
+                var bytesRead = await contentStream.ReadAsync(buffer);
+                if (bytesRead == 0) break;
+
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+
+                totalBytesRead += bytesRead;
                 var currentTime = DateTime.Now;
                 var timeSpan = currentTime - startTime;
-                totalBytesRead = e.BytesReceived;
-                totalBytes = e.TotalBytesToReceive;
 
-                if (timeSpan.TotalSeconds >= 1)
+                // 计算实时下载速度（每秒）
+                if ((currentTime - lastUpdateTime).TotalSeconds >= 1)
                 {
-                    bytesPerSecond = totalBytesRead - (totalBytesRead - e.BytesReceived);
-                    startTime = currentTime;
+                    bytesPerSecond = (long)(totalBytesRead / timeSpan.TotalSeconds);
+                    lastUpdateTime = currentTime;
                 }
 
-                var progressPercentage = totalBytes > 0 ? (double)totalBytesRead / totalBytes * 100 : 0;
+                // 更新进度
+                var progressPercentage = totalBytes.HasValue && totalBytes.Value > 0
+                    ? (double)totalBytesRead / totalBytes.Value * 100
+                    : 0;
+
                 dialog?.UpdateProgress(progressPercentage);
-                GrowlHelper.OnUIThread(() =>
-                    MainWindow.ViewModel.OutputDownloadProgress(totalBytesRead, totalBytes, (int)bytesPerSecond, timeSpan.TotalSeconds));
+
+                // UI线程更新
+                DispatcherHelper.RunOnMainThread(() =>
+                    MainWindow.ViewModel.OutputDownloadProgress(
+                        totalBytesRead,
+                        totalBytes ?? 0,
+                        (int)bytesPerSecond,
+                        timeSpan.TotalSeconds));
 
                 if (progressPercentage >= 100)
                 {
-                    GrowlHelper.OnUIThread(() => MainWindow.ViewModel.OutputDownloadProgress(downloading: false, output: key.ToLocalization()));
+                    DispatcherHelper.RunOnMainThread(() =>
+                        MainWindow.ViewModel.OutputDownloadProgress(
+                            downloading: false,
+                            output: key.ToLocalization()));
                 }
-            };
+            }
 
-            await client.DownloadFileTaskAsync(new Uri(url), filePath);
             return true;
         }
-        catch (WebException webEx)
+        catch (HttpRequestException httpEx)
         {
-            LoggerService.LogError($"HTTP请求出现异常: {webEx.Message}");
+            LoggerService.LogError($"HTTP请求失败: {httpEx.Message}");
             return false;
         }
         catch (IOException ioEx)
         {
-            LoggerService.LogError($"文件操作出现异常: {ioEx.Message}");
+            LoggerService.LogError($"文件操作失败: {ioEx.Message}");
             return false;
         }
         catch (Exception ex)
         {
-            LoggerService.LogError($"出现未知异常: {ex.Message}");
+            LoggerService.LogError($"未知错误: {ex.Message}");
             return false;
         }
     }
@@ -1235,7 +1305,7 @@ public class VersionChecker
             return false;
         }
     }
-    public void CheckForGuiUpdatesWithMirrorApi()
+    public void CheckGuiVersionWithMirrorApi()
     {
         try
         {
@@ -1243,7 +1313,7 @@ public class VersionChecker
             var currentVersion = GetLocalVersion();
             var cdk = SimpleEncryptionHelper.Decrypt(DataSet.GetData("DownloadCDK", string.Empty));
             MainWindow.Instance.SetUpdating(true);
-            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "MFA", true);
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "MFA", true, true);
 
             if (IsNewVersionAvailable(latestVersion, currentVersion))
             {
@@ -1561,5 +1631,14 @@ public class VersionChecker
             }
         }
         return "UNKNOWN";
+    }
+
+    public class MirrorChangesJson
+    {
+        [JsonProperty("modified")] public List<string>? Modified;
+        [JsonProperty("deleted")] public List<string>? Deleted;
+        [JsonProperty("added")] public List<string>? Added;
+        [JsonExtensionData]
+        public Dictionary<string, object>? AdditionalData { get; set; } = new();
     }
 }

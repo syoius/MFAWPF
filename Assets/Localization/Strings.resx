@@ -789,7 +789,7 @@
   <data name="CurrentResourcesNotSupportMirror" xml:space="preserve">
     <value>当前资源不支持 Mirror 酱</value>
   </data>
-    <data name="SavePreset" xml:space="preserve">
+  <data name="SavePreset" xml:space="preserve">
     <value>保存预设</value>
   </data>
   <data name="LoadPreset" xml:space="preserve">
@@ -803,5 +803,8 @@
   </data>
   <data name="NoPresetAvailable" xml:space="preserve">
     <value>没有可用的预设</value>
+  </data>
+  <data name="MirrorUseLimitReached" xml:space="preserve">
+    <value>Mirror 酱的使用已达到上限</value>
   </data>
 </root>

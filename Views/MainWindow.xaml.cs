@@ -868,7 +868,7 @@ public partial class MainWindow
             
             // 关闭当前进程
             LoggerService.LogInfo("关闭当前进程");
-            GrowlHelper.OnUIThread(Application.Current.Shutdown);
+            DispatcherHelper.RunOnMainThread(() => Application.Current.Shutdown());
         }
         catch (Exception ex)
         {

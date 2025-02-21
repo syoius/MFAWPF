@@ -1,4 +1,4 @@
-﻿
+
 using MFAWPF.Helper;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
@@ -52,5 +52,13 @@ public class TaskItemViewModel : ViewModel
 
         return JsonConvert.SerializeObject(taskModels, settings);
     }
-    
+
+    public DragItemViewModel ToDragItemViewModel()
+    {
+        return new DragItemViewModel(new TaskInterfaceItem 
+        { 
+            Name = this.Name,
+            Task = this.Task
+        });
+    }
 }

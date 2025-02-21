@@ -219,6 +219,27 @@
                                 Margin="2,2,0,0"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
+                                <Button ToolTip="{lex:Loc SavePreset}" Width="15" Height="15"
+                                        Style="{StaticResource textBoxButton}"
+                                        Foreground="{DynamicResource GrayColor4}"
+                                        Click="SavePreset"
+                                        IsEnabled="{Binding ViewModel.Idle}"
+                                        Padding="0" Margin="7 0 0 0"
+                                        hc:IconElement.Width="12"
+                                        hc:IconElement.Height="12"
+                                        hc:IconElement.Geometry="{StaticResource SaveAsGeometry}" />
+                                <Button
+                                        ToolTip="{lex:Loc LoadPreset}"
+                                        Width="15"
+                                        Height="15"
+                                        Style="{StaticResource textBoxButton}"
+                                        Foreground="{DynamicResource GrayColor4}"
+                                        Click="LoadPreset"
+                                        IsEnabled="{Binding ViewModel.Idle}"
+                                        Padding="0" Margin="7 0 0 0"
+                                        hc:IconElement.Width="12"
+                                        hc:IconElement.Height="12"
+                                        hc:IconElement.Geometry="{StaticResource FolderGeometry}" />
                                 <Button
                                     Click="SelectAll"
                                     Foreground="{DynamicResource GrayColor4}"

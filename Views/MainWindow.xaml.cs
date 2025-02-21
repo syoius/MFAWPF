@@ -30,6 +30,7 @@ using ComboBox = HandyControl.Controls.ComboBox;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using ScrollViewer = HandyControl.Controls.ScrollViewer;
 using TextBox = HandyControl.Controls.TextBox;
+using MFAWPF.Controls;
 
 namespace MFAWPF.Views;
 
@@ -45,6 +46,9 @@ public partial class MainWindow
 
     public Dictionary<string, TaskModel> TaskDictionary = new();
     public Dictionary<string, TaskModel> BaseTasks = new();
+
+
+    private readonly MFAWPF.Helper.PresetManager _presetManager = new();
 
     public MainWindow(ViewModels.MainViewModel viewModel)
     {
@@ -747,7 +751,6 @@ public partial class MainWindow
                 Margin = new Thickness(2)
             };
         AddResourcesOption(s1);
-
         ScrollViewer sv1 = new()
             {
                 Content = s1,
@@ -835,10 +838,44 @@ public partial class MainWindow
     // }
 
 
-    public void RestartMFA()
+    public async Task RestartMFA()
     {
-        Process.Start(Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty);
-        DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
+        try 
+        {
+            LoggerService.LogInfo("准备重启应用程序");
+            
+            // 确保所有数据都已写入
+            await Task.Delay(500);
+            
+            // 获取当前进程路径
+            string processPath = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+            if (string.IsNullOrEmpty(processPath))
+            {
+                throw new Exception("无法获取应用程序路径");
+            }
+            
+            // 启动新进程
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = processPath,
+                UseShellExecute = true
+            };
+            
+            LoggerService.LogInfo("启动新进程");
+            Process.Start(startInfo);
+            
+            // 等待一段时间确保新进程启动
+            await Task.Delay(1000);
+            
+            // 关闭当前进程
+            LoggerService.LogInfo("关闭当前进程");
+            GrowlHelper.OnUIThread(Application.Current.Shutdown);
+        }
+        catch (Exception ex)
+        {
+            LoggerService.LogError($"重启应用程序时发生错误: {ex.Message}");
+            Growl.Error($"重启失败: {ex.Message}");
+        }
     }
 
     private void AddResourcesOption(Panel panel = null, int defaultValue = 0)
@@ -1031,7 +1068,7 @@ public partial class MainWindow
         FlowDocument flowDocument = new FlowDocument();
         Paragraph paragraph = new Paragraph();
 
-        string pattern = @"\[(?<tag>[^\]]+):?(?<value>[^\]]*)\](?<content>.*?)\[/\k<tag>\]";
+        string pattern = @"\[(?<tag>[^\]]+):(?<value>[^\]]*)\](?<content>.*?)\[/\k<tag>\]";
         Regex regex = new Regex(pattern);
         int lastIndex = 0;
 
@@ -1918,5 +1955,88 @@ public partial class MainWindow
             ViewModel.TaskItemViewModels = new();
             action?.Invoke();
         });
+    }
+
+    private async void SavePreset(object sender, RoutedEventArgs e)
+    {
+        try 
+        {
+            LoggerService.LogInfo("开始保存预设流程");
+            
+            var inputDialog = new InputDialog
+            {
+                Title = "保存预设",
+                Message = "请输入预设名称:"
+            };
+
+            LoggerService.LogInfo("显示输入对话框");
+            if (inputDialog.ShowDialog() == true)
+            {
+                string presetName = inputDialog.InputText;
+                LoggerService.LogInfo($"用户输入的预设名称: {presetName}");
+                
+                if (string.IsNullOrWhiteSpace(presetName))
+                {
+                    LoggerService.LogInfo("预设名称为空，终止保存");
+                    Growl.Warning("预设名称不能为空");
+                    return;
+                }
+
+                LoggerService.LogInfo($"开始调用 PresetManager.SavePreset: {presetName}");
+                await _presetManager.SavePreset(presetName);
+                LoggerService.LogInfo("预设保存完成");
+            }
+            else
+            {
+                LoggerService.LogInfo("用户取消了保存预设操作");
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerService.LogError($"保存预设时发生异常: {ex}");
+            Growl.Error($"保存预设失败: {ex.Message}");
+        }
+    }
+
+    private async void LoadPreset(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var presets = _presetManager.GetPresetNames();
+            if (!presets.Any())
+            {
+                Growl.Warning("没有可用的预设");
+                return;
+            }
+
+            var dialog = new PresetSelectDialog(presets);
+            if (dialog.ShowDialog() == true && dialog.SelectedPreset != null)
+            {
+                string selectedPreset = dialog.SelectedPreset;
+                LoggerService.LogInfo($"开始加载预设: {selectedPreset}");
+                
+                var maaInterface = await _presetManager.LoadPreset(selectedPreset);
+                if (maaInterface != null)
+                {
+                    LoggerService.LogInfo("设置 MaaInterface.Instance");
+                    MaaInterface.Instance = maaInterface;
+                    
+                    LoggerService.LogInfo("等待文件系统操作完成");
+                    await Task.Delay(500);
+                    
+                    LoggerService.LogInfo("重启应用程序");
+                    await RestartMFA();
+                }
+                else
+                {
+                    LoggerService.LogError("加载预设失败：MaaInterface 为空");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerService.LogError($"加载预设时发生异常: {ex}");
+            Growl.Error($"加载预设失败: {ex.Message}");
+        }
     }
 }

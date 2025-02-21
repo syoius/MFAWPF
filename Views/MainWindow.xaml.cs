@@ -47,7 +47,6 @@ public partial class MainWindow
     public Dictionary<string, TaskModel> TaskDictionary = new();
     public Dictionary<string, TaskModel> BaseTasks = new();
 
-
     private readonly MFAWPF.Helper.PresetManager _presetManager = new();
 
     public MainWindow(ViewModels.MainViewModel viewModel)
@@ -1717,7 +1716,6 @@ public partial class MainWindow
             });
         });
     }
-
     public static void AppendVersionLog(string? resourceVersion)
     {
         if (resourceVersion is null)

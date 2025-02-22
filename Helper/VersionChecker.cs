@@ -301,7 +301,22 @@ public class VersionChecker
 
         var resourcePath = Path.Combine(wpfDir, "resource");
         if (Directory.Exists(resourcePath))
-            Directory.Delete(resourcePath, true);
+        {
+            // 暂时只删除copilot文件夹
+            var copilotPaths = new[]
+            {
+                Path.Combine(resourcePath, "base", "pipeline", "copilot"),
+                Path.Combine(resourcePath, "zh_tw", "pipeline", "copilot")
+            };
+
+            foreach (var path in copilotPaths)
+            {
+                if (Directory.Exists(path))
+                {
+                    Directory.Delete(path, true);
+                }
+            }
+        }
 
         var di = new DirectoryInfo(resourceDirPath);
         if (di.Exists)
@@ -555,7 +570,22 @@ public class VersionChecker
 
         var resourcePath = Path.Combine(AppContext.BaseDirectory, "resource");
         if (Directory.Exists(resourcePath))
-            Directory.Delete(resourcePath, true);
+        {
+            // 暂时只删除copilot文件夹
+            var copilotPaths = new[]
+            {
+                Path.Combine(resourcePath, "base", "pipeline", "copilot"),
+                Path.Combine(resourcePath, "zh_tw", "pipeline", "copilot")
+            };
+
+            foreach (var path in copilotPaths)
+            {
+                if (Directory.Exists(path))
+                {
+                    Directory.Delete(path, true);
+                }
+            }
+        }
 
         var interfacePath = Path.Combine(tempExtractDir, "interface.json");
         var resourceDirPath = Path.Combine(tempExtractDir, "resource");

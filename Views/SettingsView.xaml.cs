@@ -339,7 +339,7 @@ public partial class SettingsView
             Margin = new Thickness(2),
             HorizontalAlignment = HorizontalAlignment.Center,
             Command = ControlCommands.OpenLink,
-            CommandParameter = "https://github.com/SweetSmellFox/MFAWPF"
+            CommandParameter = "https://github.com/syoius/MFAWPF"
         });
         var resourceLink = MaaInterface.Instance?.Url;
         if (!string.IsNullOrWhiteSpace(resourceLink))

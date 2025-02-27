@@ -1,4 +1,4 @@
-﻿using MFAWPF.Helper;
+using MFAWPF.Helper;
 using MFAWPF.Helper.ValueType;
 using Newtonsoft.Json;
 
@@ -51,5 +51,4 @@ public class TaskItemViewModel : ViewModel
 
         return JsonConvert.SerializeObject(taskModels, settings);
     }
-    
 }

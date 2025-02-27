@@ -782,6 +782,21 @@
   <data name="CurrentResourcesNotSupportMirror" xml:space="preserve">
     <value>The current resources do not support Mirror Chyan.</value>
   </data>
+  <data name="SavePreset" xml:space="preserve">
+    <value>Save Preset</value>
+  </data>
+  <data name="LoadPreset" xml:space="preserve">
+    <value>Load Preset</value>
+  </data>
+  <data name="NoTaskToSave" xml:space="preserve">
+    <value>Task(s) are required to save.</value>
+  </data>
+  <data name="PresetNameEmpty" xml:space="preserve">
+    <value>Preset name cannot be empty.</value>
+  </data>
+  <data name="NoPresetAvailable" xml:space="preserve">
+    <value>No preset available.</value>
+  </data>
   <data name="MirrorUseLimitReached" xml:space="preserve">
     <value>The usage of Mirror Chyan has reached the limit.</value>
   </data>

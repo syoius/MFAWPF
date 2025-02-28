@@ -73,6 +73,7 @@
                     hc:TitleElement.TitleWidth="110"
                     x:Name="SoftwarePathTextBox" />
                 <Button
+                    Command="{Binding ViewModel.SelectSoftCommand}"
                     Grid.Column="1"
                     Command="{Binding ViewModel.SelectSoftCommand}"
                     ToolTip="{lex:Loc Select}"

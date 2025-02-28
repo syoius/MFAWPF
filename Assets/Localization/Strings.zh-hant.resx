@@ -347,6 +347,12 @@
   <data name="About" xml:space="preserve">
     <value>關於我們</value>
   </data>
+  <data name="Manual" xml:space="preserve">
+    <value>使用指南</value>
+  </data>
+  <data name="QQChannel" xml:space="preserve">
+    <value>交流反饋: QQ頻道搜索Maa鸢</value>
+  </data>
     <data name="ScreencapCost" xml:space="preserve">
     <value>截圖耗時: {0}ms({1})</value>
   </data>

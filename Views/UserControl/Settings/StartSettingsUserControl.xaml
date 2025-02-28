@@ -74,6 +74,7 @@
                     x:Name="SoftwarePathTextBox" />
                 <Button
                     Grid.Column="1"
+                    Command="{Binding ViewModel.SelectSoftCommand}"
                     ToolTip="{lex:Loc Select}"
                     VerticalAlignment="Bottom"
                     x:Name="SoftwarePathSelectButton">

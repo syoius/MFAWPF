@@ -328,18 +328,11 @@ public class VersionChecker
         }
 
         // 复制presets目录
-        var presetsDirPath = Path.Combine(tempExtractDir, "presets");
+        var presetsDirPath = Path.Combine(tempExtractDir, "config");
         var presetsDi = new DirectoryInfo(presetsDirPath);
         if (presetsDi.Exists)
         {
-            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "presets"));
-        }
-
-        // 删除config文件夹
-        var configDirPath = Path.Combine(wpfDir, "config");
-        if (Directory.Exists(configDirPath))
-        {
-            Directory.Delete(configDirPath, true);
+            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "config"));
         }
 
         dialog?.UpdateProgress(70);
@@ -602,18 +595,11 @@ public class VersionChecker
         }
 
         // 复制presets目录
-        var presetsDirPath = Path.Combine(tempExtractDir, "presets");
+        var presetsDirPath = Path.Combine(tempExtractDir, "config");
         var presetsDi = new DirectoryInfo(presetsDirPath);
         if (presetsDi.Exists)
         {
-            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "presets"));
-        }
-
-        // 删除config文件夹
-        var configDirPath = Path.Combine(wpfDir, "config");
-        if (Directory.Exists(configDirPath))
-        {
-            Directory.Delete(configDirPath, true);
+            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "config"));
         }
 
         dialog?.UpdateProgress(70);

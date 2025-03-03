@@ -20,6 +20,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <StackPanel Grid.Column="0">
             <controls1:CustomTextBlock
@@ -42,11 +43,19 @@
                 VerticalAlignment="Center">
                 <Hyperlink
                     Command="{x:Static hc:ControlCommands.OpenLink}"
-                    CommandParameter="{x:Static helper:MFAUrls.GitHubIssues}"
+                    CommandParameter="{x:Static helper:MFAUrls.MaayuanDoc}"
                     Cursor="Hand"
                     TextDecorations="None">
-                    <TextBlock Text="{lex:Loc Issue}" />
+                    <TextBlock Text="{lex:Loc Manual}" />
                 </Hyperlink>
+            </controls1:CustomTextBlock>
+        </StackPanel>
+        <StackPanel Grid.Column="2">
+            <controls1:CustomTextBlock
+                HorizontalAlignment="Center"
+                Margin="5"
+                VerticalAlignment="Center">
+                <TextBlock Text="{lex:Loc QQChannel}" />
             </controls1:CustomTextBlock>
         </StackPanel>
     </Grid>

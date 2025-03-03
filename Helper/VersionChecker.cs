@@ -356,10 +356,37 @@ public class VersionChecker
 
         dialog?.UpdateProgress(60);
 
+        var resourcePath = Path.Combine(wpfDir, "resource");
+        if (Directory.Exists(resourcePath))
+        {
+            // 暂时只删除copilot文件夹
+            var copilotPaths = new[]
+            {
+                Path.Combine(resourcePath, "base", "pipeline", "copilot"),
+                Path.Combine(resourcePath, "zh_tw", "pipeline", "copilot")
+            };
+
+            foreach (var path in copilotPaths)
+            {
+                if (Directory.Exists(path))
+                {
+                    Directory.Delete(path, true);
+                }
+            }
+        }
+
         var di = new DirectoryInfo(resourceDirPath);
         if (di.Exists)
         {
             CopyFolder(resourceDirPath, Path.Combine(wpfDir, "resource"));
+        }
+
+        // 复制presets目录
+        var presetsDirPath = Path.Combine(tempExtractDir, "config");
+        var presetsDi = new DirectoryInfo(presetsDirPath);
+        if (presetsDi.Exists)
+        {
+            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "config"));
         }
 
         dialog?.UpdateProgress(70);
@@ -619,6 +646,14 @@ public class VersionChecker
         if (di.Exists)
         {
             CopyFolder(resourceDirPath, Path.Combine(wpfDir, "resource"));
+        }
+
+        // 复制presets目录
+        var presetsDirPath = Path.Combine(tempExtractDir, "config");
+        var presetsDi = new DirectoryInfo(presetsDirPath);
+        if (presetsDi.Exists)
+        {
+            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "config"));
         }
 
         dialog?.UpdateProgress(70);
@@ -1482,7 +1517,7 @@ public class VersionChecker
         }
     }
 
-    public string GetLatestVersionFromGithub(string owner = "SweetSmellFox", string repo = "MFAWPF", bool isDownload = false)
+    public string GetLatestVersionFromGithub(string owner = "syoius", string repo = "MFAWPF", bool isDownload = false)
     {
         if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repo))
             return string.Empty;

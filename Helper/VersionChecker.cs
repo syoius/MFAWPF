@@ -13,6 +13,7 @@ using MFAWPF.Views.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Management;
@@ -28,66 +29,117 @@ namespace MFAWPF.Helper;
 public class VersionChecker
 {
     private static readonly VersionChecker Checker = new();
-    public Queue<ValueType.MFATask> Queue = new();
+    public ConcurrentQueue<ValueType.MFATask> Queue = new ConcurrentQueue<ValueType.MFATask>();
 
     public static void Check()
     {
-        if (MFAConfiguration.GetConfiguration("EnableAutoUpdateResource", false))
+        var config = new
         {
-            Checker.Queue.Enqueue(new ValueType.MFATask
-            {
-                Action = () => Checker.UpdateResourceBySelection(MFAConfiguration.GetConfiguration("EnableAutoUpdateMFA", false), true, () =>
-                {
-                    if (MFAConfiguration.GetConfiguration("EnableAutoUpdateMFA", false))
-                        Checker.UpdateMFABySelection(true);
-                }),
-                Name = "更新资源"
-            });
+            AutoUpdateResource = MFAConfiguration.GetConfiguration("EnableAutoUpdateResource", false),
+            AutoUpdateMFA = MFAConfiguration.GetConfiguration("EnableAutoUpdateMFA", false),
+            CheckVersion = MFAConfiguration.GetConfiguration("EnableCheckVersion", true)
+        };
+
+        if (config.AutoUpdateResource)
+        {
+            Console.WriteLine(1);
+            AddResourceUpdateTask(config.AutoUpdateMFA);
         }
-        else if (MFAConfiguration.GetConfiguration("EnableCheckVersion", true))
+        else if (config.CheckVersion)
         {
-            Checker.Queue.Enqueue(new ValueType.MFATask
-            {
-                Action = () => Checker.CheckResourceBySelection(),
-                Name = "检测资源版本"
-            });
+            Console.WriteLine(2);
+            AddResourceCheckTask();
         }
 
-        if (MFAConfiguration.GetConfiguration("EnableAutoUpdateMFA", false) && !MFAConfiguration.GetConfiguration("EnableAutoUpdateResource", false))
+        if (config.AutoUpdateMFA)
         {
-            Checker.Queue.Enqueue(new ValueType.MFATask
-            {
-                Action = () => Checker.UpdateMFABySelection(true),
-                Name = "更新软件"
-            });
+            Console.WriteLine(3);
+            AddMFAUpdateTask();
         }
-        else if (MFAConfiguration.GetConfiguration("EnableCheckVersion", true))
+        else if (config.CheckVersion)
         {
-            Checker.Queue.Enqueue(new ValueType.MFATask
-            {
-                Action = () => Checker.CheckMFABySelection(),
-                Name = "检测资源版本"
-            });
+            Console.WriteLine(4);
+            AddMFACheckTask();
         }
 
-        TaskManager.RunTaskAsync(() => Checker.ExecuteTasks(), () => ToastNotification.ShowDirect("自动更新时发生错误！"), "启动检测");
+        TaskManager.RunTaskAsync(async () => await Checker.ExecuteTasksAsync(),
+            () => ToastNotification.ShowDirect("自动更新时发生错误！"), "启动检测");
     }
-
-    private void ExecuteTasks()
+    private static void AddResourceCheckTask()
     {
-        while (Queue.Count > 0)
+        Checker.Queue.Enqueue(new ValueType.MFATask
         {
-            var task = Queue.Dequeue();
-            if (!task.Run()) break;
-        }
+            Action = async () =>
+            {
+                Checker.CheckResourceBySelection();
+            },
+            Name = "更新资源"
+        });
     }
 
+    private static void AddMFACheckTask()
+    {
+        Checker.Queue.Enqueue(new ValueType.MFATask
+        {
+            Action = async () => Checker.CheckMFABySelection(),
+            Name = "更新软件"
+        });
+    }
+
+    private static void AddResourceUpdateTask(bool autoUpdateMFA)
+    {
+        Checker.Queue.Enqueue(new ValueType.MFATask
+        {
+            Action = async () =>
+            {
+                await Checker.UpdateResourceBySelection(autoUpdateMFA, true); // 添加 await
+            },
+            Name = "更新资源"
+        });
+    }
+    
+    private SemaphoreSlim _queueLock = new (1, 1);
+    private static void AddMFAUpdateTask()
+    {
+        Checker.Queue.Enqueue(new ValueType.MFATask
+        {
+            Action = async () => Checker.UpdateMFABySelection(true),
+            Name = "更新软件"
+        });
+    }
+
+
+    private async Task ExecuteTasksAsync()
+    {
+        try
+        {
+            while (Queue.TryDequeue(out var task))
+            {
+                await _queueLock.WaitAsync();
+                LoggerService.LogInfo($"开始执行任务: {task.Name}");
+                await task.Action();
+                LoggerService.LogInfo($"任务完成: {task.Name}");
+                _queueLock.Release();
+            }
+        }
+        finally
+        {
+            Instances.RootViewModel.SetUpdating(false);
+        }
+    }
     public static void CheckMFAVersionAsync() => TaskManager.RunTaskAsync(() => Checker.CheckMFABySelection());
     public static void CheckResourceVersionAsync() => TaskManager.RunTaskAsync(() => Checker.CheckResourceBySelection());
     public static void UpdateResourceAsync() => TaskManager.RunTaskAsync(() => Checker.UpdateResourceBySelection());
     public static void UpdateMFAAsync() => TaskManager.RunTaskAsync(() => Checker.UpdateMFABySelection());
 
     public static void UpdateMaaFwAsync() => TaskManager.RunTaskAsync(() => Checker.UpdateMaaFw());
+
+    public static void CheckMFAVersion() => Checker.CheckMFABySelection();
+    public static void CheckResourceVersion() => Checker.CheckResourceBySelection();
+    public static void UpdateResource() => Checker.UpdateResourceBySelection();
+    public static void UpdateMFA() => Checker.UpdateMFABySelection();
+
+    public static void UpdateMaaFw() => Checker.UpdateMaaFw();
 
     public void SetText(string text, MFAWPF.Views.UI.Dialog.DownloadDialog dialog, bool noDialog = false)
     {
@@ -121,30 +173,32 @@ public class VersionChecker
                 break;
         }
     }
-    public async void UpdateResourceBySelection(bool closeDialog = false, bool noDialog = false, Action action = null)
+    public async Task UpdateResourceBySelection(bool closeDialog = false, bool noDialog = false, Action action = null)
     {
         switch (Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex)
         {
-            case 0: UpdateResource(closeDialog, noDialog, action); break;
-            case 1: UpdateResourceWithMirrorApi(closeDialog, noDialog, action); break;
-        }
-    }
-    public async void UpdateMFABySelection(bool noDialog = false)
-    {
-        switch (Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex)
-        {
-            case 0: UpdateMFA(noDialog); break;
-            case 1: UpdateMFAWithMirrorApi(noDialog); break;
+            case 0: await UpdateResource(closeDialog, noDialog, action); break;
+            case 1: await UpdateResourceWithMirrorApi(closeDialog, noDialog, action); break;
         }
     }
 
-    public async void UpdateMaaFw(bool noDialog = false)
+    public async Task UpdateMFABySelection(bool noDialog = false)
+    {
+        switch (Instances.VersionUpdateSettingsUserControlModel.DownloadSourceIndex)
+        {
+            case 0: await UpdateMFA(noDialog); break;
+            case 1: await UpdateMFAWithMirrorApi(noDialog); break;
+        }
+    }
+
+    public async Task UpdateMaaFw(bool noDialog = false)
     {
         UpdateMaaFwWithMirrorApi(noDialog);
     }
 
-    public async void UpdateResourceWithMirrorApi(bool closeDialog = false, bool noDialog = false, Action action = null)
+    public async Task UpdateResourceWithMirrorApi(bool closeDialog = false, bool noDialog = false, Action action = null)
     {
+        Console.WriteLine("测试1");
         Instances.RootViewModel.SetUpdating(true);
         MFAWPF.Views.UI.Dialog.DownloadDialog dialog = null;
         DispatcherHelper.RunOnMainThread(() =>
@@ -230,7 +284,7 @@ public class VersionChecker
         }
 
         LoggerService.LogInfo(downloadUrl);
-        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp");
+        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_res");
         Directory.CreateDirectory(tempPath);
 
         var tempZipFilePath = Path.Combine(tempPath, $"resource_{latestVersion}.zip");
@@ -372,7 +426,7 @@ public class VersionChecker
         dialog?.UpdateProgress(100);
 
         dialog?.SetText("UpdateCompleted".ToLocalization());
-        dialog.SetRestartButtonVisibility(true);
+        dialog?.SetRestartButtonVisibility(true);
 
         Instances.RootViewModel.SetUpdating(false);
 
@@ -380,7 +434,7 @@ public class VersionChecker
         DispatcherHelper.RunOnMainThread(() =>
         {
             if (closeDialog) dialog?.Close();
-            if (noDialog)
+            if (!noDialog)
             {
                 if (MessageBoxHelper.Show("GameResourceUpdated".ToLocalization(), buttons: MessageBoxButton.YesNo, icon: MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
@@ -434,7 +488,7 @@ public class VersionChecker
         }
     }
 
-    public async void UpdateResource(bool closeDialog = false, bool noDialog = false, Action action = null)
+    public async Task UpdateResource(bool closeDialog = false, bool noDialog = false, Action action = null)
     {
         Instances.RootViewModel.SetUpdating(true);
         MFAWPF.Views.UI.Dialog.DownloadDialog dialog = null;
@@ -525,13 +579,13 @@ public class VersionChecker
             return;
         }
 
-        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp");
+        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_res");
         Directory.CreateDirectory(tempPath);
 
         var tempZipFilePath = Path.Combine(tempPath, $"resource_{latestVersion}.zip");
         dialog?.SetText("Downloading".ToLocalization());
         dialog?.UpdateProgress(0);
-
+        Console.WriteLine("资源下载");
         if (!await DownloadFileAsync(downloadUrl, tempZipFilePath, dialog, "GameResourceUpdated"))
         {
             SetText("DownloadFailed", dialog, noDialog);
@@ -553,7 +607,7 @@ public class VersionChecker
 
         ZipFile.ExtractToDirectory(tempZipFilePath, tempExtractDir);
         dialog?.UpdateProgress(50);
-
+        Console.WriteLine("资源解压");
         var resourcePath = Path.Combine(AppContext.BaseDirectory, "resource");
         if (Directory.Exists(resourcePath))
         {
@@ -642,7 +696,7 @@ public class VersionChecker
         DispatcherHelper.RunOnMainThread(() =>
         {
             if (closeDialog) dialog?.Close();
-            if (noDialog)
+            if (!noDialog)
             {
                 if (MessageBoxHelper.Show("GameResourceUpdated".ToLocalization(), buttons: MessageBoxButton.YesNo, icon: MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
@@ -658,7 +712,7 @@ public class VersionChecker
         action?.Invoke();
     }
 
-    async public void UpdateMaaFwWithMirrorApi(bool noDialog = false)
+    public async Task UpdateMaaFwWithMirrorApi(bool noDialog = false)
     {
         Instances.RootViewModel.SetUpdating(true);
 
@@ -733,7 +787,7 @@ public class VersionChecker
             return;
         }
 
-        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp");
+        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_maafw");
         Directory.CreateDirectory(tempPath);
 
         var tempZipFilePath = Path.Combine(tempPath, $"maafw_{latestVersion}.zip");
@@ -764,20 +818,20 @@ public class VersionChecker
 
         var utf8Bytes = Encoding.UTF8.GetBytes(AppContext.BaseDirectory);
         var utf8BaseDirectory = Encoding.UTF8.GetString(utf8Bytes);
-        var batFilePath = Path.Combine(utf8BaseDirectory, "temp", "update_maafw.bat");
+        var batFilePath = Path.Combine(utf8BaseDirectory, "temp_maafw", "update_maafw.bat");
         await using (var sw = new StreamWriter(batFilePath))
         {
             await sw.WriteLineAsync("@echo off");
             await sw.WriteLineAsync("chcp 65001");
 
             await sw.WriteLineAsync("ping 127.0.0.1 -n 3 > nul");
-            var extractedPath = $"\"{utf8BaseDirectory}temp\\maafw_{latestVersion}_extracted\\bin\\*.*\"";
+            var extractedPath = $"\"{utf8BaseDirectory}temp_maafw\\maafw_{latestVersion}_extracted\\bin\\*.*\"";
             var targetPath = $"\"{utf8BaseDirectory}\"";
             await sw.WriteLineAsync("ping 127.0.0.1 -n 1 > nul");
             await sw.WriteLineAsync($"xcopy /E /Y {extractedPath} {targetPath}");
             await sw.WriteLineAsync("ping 127.0.0.1 -n 1 > nul");
             await sw.WriteLineAsync($"start /d \"{utf8BaseDirectory}\" {currentExeFileName}");
-            await sw.WriteLineAsync($"rd /S /Q \"{utf8BaseDirectory}temp\"");
+            await sw.WriteLineAsync($"rd /S /Q \"{utf8BaseDirectory}temp_maafw\"");
         }
 
         var psi = new ProcessStartInfo(batFilePath)
@@ -789,7 +843,7 @@ public class VersionChecker
         Thread.Sleep(50);
         DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
     }
-    async public void UpdateMFAWithMirrorApi(bool noDialog = false)
+    public async Task UpdateMFAWithMirrorApi(bool noDialog = false)
     {
         Instances.RootViewModel.SetUpdating(true);
 
@@ -864,7 +918,7 @@ public class VersionChecker
             return;
         }
 
-        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp");
+        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_mfa");
         Directory.CreateDirectory(tempPath);
 
         var tempZipFilePath = Path.Combine(tempPath, $"mfa_{latestVersion}.zip");
@@ -895,15 +949,15 @@ public class VersionChecker
 
         var utf8Bytes = Encoding.UTF8.GetBytes(AppContext.BaseDirectory);
         var utf8BaseDirectory = Encoding.UTF8.GetString(utf8Bytes);
-        var batFilePath = Path.Combine(utf8BaseDirectory, "temp", "update_mfa.bat");
+        var batFilePath = Path.Combine(utf8BaseDirectory, "temp_mfa", "update_mfa.bat");
         await using (var sw = new StreamWriter(batFilePath))
         {
             await sw.WriteLineAsync("@echo off");
             await sw.WriteLineAsync("chcp 65001");
 
             await sw.WriteLineAsync("ping 127.0.0.1 -n 3 > nul");
-            var extractedPath = $"\"{utf8BaseDirectory}temp\\mfa_{latestVersion}_extracted\\*.*\"";
-            var extracted = $"{utf8BaseDirectory}temp\\mfa_{latestVersion}_extracted\\";
+            var extractedPath = $"\"{utf8BaseDirectory}temp_mfa\\mfa_{latestVersion}_extracted\\*.*\"";
+            var extracted = $"{utf8BaseDirectory}temp_mfa\\mfa_{latestVersion}_extracted\\";
             var targetPath = $"\"{utf8BaseDirectory}\"";
             await sw.WriteLineAsync($"copy /Y \"{extracted}{Assembly.GetEntryAssembly().GetName().Name}.exe\" \"{utf8BaseDirectory}{currentExeFileName}\"");
             await sw.WriteLineAsync("ping 127.0.0.1 -n 1 > nul");
@@ -912,7 +966,7 @@ public class VersionChecker
             await sw.WriteLineAsync($"xcopy /E /Y {extractedPath} {targetPath}");
             await sw.WriteLineAsync("ping 127.0.0.1 -n 1 > nul");
             await sw.WriteLineAsync($"start /d \"{utf8BaseDirectory}\" {currentExeFileName}");
-            await sw.WriteLineAsync($"rd /S /Q \"{utf8BaseDirectory}temp\"");
+            await sw.WriteLineAsync($"rd /S /Q \"{utf8BaseDirectory}temp_mfa\"");
         }
 
         var psi = new ProcessStartInfo(batFilePath)
@@ -925,7 +979,7 @@ public class VersionChecker
         DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
     }
 
-    async public void UpdateMFA(bool noDialog = false)
+    public async Task UpdateMFA(bool noDialog = false)
     {
         Instances.RootViewModel.SetUpdating(true);
 
@@ -1013,7 +1067,7 @@ public class VersionChecker
             return;
         }
 
-        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp");
+        var tempPath = Path.Combine(AppContext.BaseDirectory, "temp_mfa");
         Directory.CreateDirectory(tempPath);
 
         var tempZipFilePath = Path.Combine(tempPath, $"mfa_{latestVersion}.zip");
@@ -1037,22 +1091,22 @@ public class VersionChecker
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             return;
         }
-
+        Console.WriteLine("测试1");
         ZipFile.ExtractToDirectory(tempZipFilePath, tempExtractDir);
 
         var currentExeFileName = Process.GetCurrentProcess().MainModule.ModuleName;
 
         var utf8Bytes = Encoding.UTF8.GetBytes(AppContext.BaseDirectory);
         var utf8BaseDirectory = Encoding.UTF8.GetString(utf8Bytes);
-        var batFilePath = Path.Combine(utf8BaseDirectory, "temp", "update_mfa.bat");
+        var batFilePath = Path.Combine(utf8BaseDirectory, "temp_mfa", "update_mfa.bat");
         await using (var sw = new StreamWriter(batFilePath))
         {
             await sw.WriteLineAsync("@echo off");
             await sw.WriteLineAsync("chcp 65001");
 
             await sw.WriteLineAsync("ping 127.0.0.1 -n 3 > nul");
-            var extractedPath = $"\"{utf8BaseDirectory}temp\\mfa_{latestVersion}_extracted\\*.*\"";
-            var extracted = $"{utf8BaseDirectory}temp\\mfa_{latestVersion}_extracted\\";
+            var extractedPath = $"\"{utf8BaseDirectory}temp_mfa\\mfa_{latestVersion}_extracted\\*.*\"";
+            var extracted = $"{utf8BaseDirectory}temp_mfa\\mfa_{latestVersion}_extracted\\";
             var targetPath = $"\"{utf8BaseDirectory}\"";
             await sw.WriteLineAsync($"copy /Y \"{extracted}{Assembly.GetEntryAssembly().GetName().Name}.exe\" \"{utf8BaseDirectory}{currentExeFileName}\"");
             await sw.WriteLineAsync("ping 127.0.0.1 -n 1 > nul");
@@ -1061,7 +1115,7 @@ public class VersionChecker
             await sw.WriteLineAsync($"xcopy /E /Y {extractedPath} {targetPath}");
             await sw.WriteLineAsync("ping 127.0.0.1 -n 1 > nul");
             await sw.WriteLineAsync($"start /d \"{utf8BaseDirectory}\" {currentExeFileName}");
-            await sw.WriteLineAsync($"rd /S /Q \"{utf8BaseDirectory}temp\"");
+            await sw.WriteLineAsync($"rd /S /Q \"{utf8BaseDirectory}temp_mfa\"");
         }
 
         var psi = new ProcessStartInfo(batFilePath)
@@ -1246,7 +1300,8 @@ public class VersionChecker
 
             var buffer = new byte[8192];
             var stopwatch = Stopwatch.StartNew();
-            var lastUpdateTime = DateTime.Now;
+            var lastSpeedUpdateTime = startTime;
+            long lastTotalBytesRead = 0;
 
             while (true)
             {
@@ -1257,38 +1312,57 @@ public class VersionChecker
 
                 totalBytesRead += bytesRead;
                 var currentTime = DateTime.Now;
-                var timeSpan = currentTime - startTime;
 
-                // 计算实时下载速度（每秒）
-                if ((currentTime - lastUpdateTime).TotalSeconds >= 1)
+
+                var timeSinceLastUpdate = currentTime - lastSpeedUpdateTime;
+                if (timeSinceLastUpdate.TotalSeconds >= 1)
                 {
-                    bytesPerSecond = (long)(totalBytesRead / timeSpan.TotalSeconds);
-                    lastUpdateTime = currentTime;
+                    bytesPerSecond = (long)((totalBytesRead - lastTotalBytesRead) / timeSinceLastUpdate.TotalSeconds);
+                    lastTotalBytesRead = totalBytesRead;
+                    lastSpeedUpdateTime = currentTime;
                 }
 
-                // 更新进度
-                var progressPercentage = totalBytes.HasValue && totalBytes.Value > 0
-                    ? (double)totalBytesRead / totalBytes.Value * 100
-                    : 0;
+
+                double progressPercentage;
+                if (totalBytes.HasValue && totalBytes.Value > 0)
+                {
+                    progressPercentage = Math.Min((double)totalBytesRead / totalBytes.Value * 100, 100);
+                }
+                else
+                {
+                    if (bytesPerSecond > 0)
+                    {
+                        double estimatedTotal = totalBytesRead + bytesPerSecond * 5;
+                        progressPercentage = Math.Min((double)totalBytesRead / estimatedTotal * 100, 99);
+                    }
+                    else
+                    {
+                        progressPercentage = Math.Min((currentTime - startTime).TotalSeconds / 30 * 100, 99);
+                    }
+                }
 
                 dialog?.UpdateProgress(progressPercentage);
 
-                // UI线程更新
-                DispatcherHelper.RunOnMainThread(() =>
-                    Instances.TaskQueueViewModel.OutputDownloadProgress(
-                        totalBytesRead,
-                        totalBytes ?? 0,
-                        (int)bytesPerSecond,
-                        timeSpan.TotalSeconds));
-
-                if (progressPercentage >= 100)
+                if (stopwatch.ElapsedMilliseconds >= 100)
                 {
                     DispatcherHelper.RunOnMainThread(() =>
                         Instances.TaskQueueViewModel.OutputDownloadProgress(
-                            downloading: false,
-                            output: key.ToLocalization()));
+                            totalBytesRead,
+                            totalBytes ?? 0,
+                            (int)bytesPerSecond,
+                            (currentTime - startTime).TotalSeconds));
+                    stopwatch.Restart();
                 }
             }
+
+            dialog?.UpdateProgress(100);
+            DispatcherHelper.RunOnMainThread(() =>
+                Instances.TaskQueueViewModel.OutputDownloadProgress(
+                    totalBytesRead,
+                    totalBytes ?? totalBytesRead,
+                    (int)bytesPerSecond,
+                    (DateTime.Now - startTime).TotalSeconds
+                ));
 
             return true;
         }
@@ -1309,22 +1383,6 @@ public class VersionChecker
         }
     }
 
-    private bool IsPathWritable(string path)
-    {
-        if (string.IsNullOrEmpty(path)) return false;
-
-        try
-        {
-            string testFilePath = Path.Combine(path, Path.GetRandomFileName());
-            using (File.Create(testFilePath)) { }
-            File.Delete(testFilePath);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
     public void CheckGuiVersionWithMirrorApi()
     {
         try

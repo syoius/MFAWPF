@@ -97,7 +97,7 @@ public class VersionChecker
             Name = "更新资源"
         });
     }
-    
+
     private SemaphoreSlim _queueLock = new (1, 1);
     private static void AddMFAUpdateTask()
     {
@@ -217,7 +217,7 @@ public class VersionChecker
 
         SetText("GettingLatestResources", dialog, noDialog);
 
-        var resId = GetResourceID();
+        var resId = "MaaYuan";
         var currentVersion = GetResourceVersion();
         var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
         dialog?.UpdateProgress(10);
@@ -356,32 +356,13 @@ public class VersionChecker
 
         dialog?.UpdateProgress(60);
 
-        var resourcePath = Path.Combine(wpfDir, "resource");
-        if (Directory.Exists(resourcePath))
-        {
-            // 暂时只删除copilot文件夹
-            var copilotPaths = new[]
-            {
-                Path.Combine(resourcePath, "base", "pipeline", "copilot"),
-                Path.Combine(resourcePath, "zh_tw", "pipeline", "copilot")
-            };
-
-            foreach (var path in copilotPaths)
-            {
-                if (Directory.Exists(path))
-                {
-                    Directory.Delete(path, true);
-                }
-            }
-        }
-
         var di = new DirectoryInfo(resourceDirPath);
         if (di.Exists)
         {
             CopyFolder(resourceDirPath, Path.Combine(wpfDir, "resource"));
         }
 
-        // 复制presets目录
+        // 复制 presets
         var presetsDirPath = Path.Combine(tempExtractDir, "config");
         var presetsDi = new DirectoryInfo(presetsDirPath);
         if (presetsDi.Exists)
@@ -454,7 +435,7 @@ public class VersionChecker
         try
         {
             Instances.RootViewModel.SetUpdating(true);
-            var resId = GetResourceID();
+            var resId = "MaaYuan";
             if (string.IsNullOrWhiteSpace(resId))
             {
                 ToastNotification.ShowDirect("CurrentResourcesNotSupportMirror".ToLocalization());
@@ -463,7 +444,7 @@ public class VersionChecker
             var currentVersion = GetResourceVersion();
             var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
 
-            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "MFA", true, true);
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "YuanMFA", true, true);
 
             if (IsNewVersionAvailable(latestVersion, currentVersion))
             {
@@ -859,14 +840,14 @@ public class VersionChecker
 
         dialog?.UpdateProgress(10);
 
-        var resId = "MFAWPF";
+        var resId = "YuanMFA";
         var currentVersion = GetLocalVersion();
         var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
         Instances.RootViewModel.SetUpdating(true);
         string downloadUrl = string.Empty, latestVersion = string.Empty;
         try
         {
-            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out downloadUrl, out latestVersion, "MFA", true);
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out downloadUrl, out latestVersion, "YuanMFA", true);
 
         }
         catch (Exception ex)
@@ -1150,7 +1131,7 @@ public class VersionChecker
         }
     }
 
-    private void GetDownloadUrlFromMirror(string version, string resId, string cdk, out string url, out string latestVersion, string userAgent = "MFA", bool isUI = false, bool onlyCheck = false)
+    private void GetDownloadUrlFromMirror(string version, string resId, string cdk, out string url, out string latestVersion, string userAgent = "YuanMFA", bool isUI = false, bool onlyCheck = false)
     {
         var cdkD = onlyCheck ? string.Empty : $"cdk={cdk}&";
         var releaseUrl = isUI
@@ -1387,11 +1368,11 @@ public class VersionChecker
     {
         try
         {
-            var resId = "MFAWPF";
+            var resId = "YuanMFA";
             var currentVersion = GetLocalVersion();
             var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
             Instances.RootViewModel.SetUpdating(true);
-            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "MFA", true, true);
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "YuanMFA", true, true);
 
             if (IsNewVersionAvailable(latestVersion, currentVersion))
             {

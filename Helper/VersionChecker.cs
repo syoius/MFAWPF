@@ -97,7 +97,7 @@ public class VersionChecker
             Name = "更新资源"
         });
     }
-    
+
     private SemaphoreSlim _queueLock = new (1, 1);
     private static void AddMFAUpdateTask()
     {
@@ -356,32 +356,13 @@ public class VersionChecker
 
         dialog?.UpdateProgress(60);
 
-        var resourcePath = Path.Combine(wpfDir, "resource");
-        if (Directory.Exists(resourcePath))
-        {
-            // 暂时只删除copilot文件夹
-            var copilotPaths = new[]
-            {
-                Path.Combine(resourcePath, "base", "pipeline", "copilot"),
-                Path.Combine(resourcePath, "zh_tw", "pipeline", "copilot")
-            };
-
-            foreach (var path in copilotPaths)
-            {
-                if (Directory.Exists(path))
-                {
-                    Directory.Delete(path, true);
-                }
-            }
-        }
-
         var di = new DirectoryInfo(resourceDirPath);
         if (di.Exists)
         {
             CopyFolder(resourceDirPath, Path.Combine(wpfDir, "resource"));
         }
 
-        // 复制presets目录
+        // 复制 presets
         var presetsDirPath = Path.Combine(tempExtractDir, "config");
         var presetsDi = new DirectoryInfo(presetsDirPath);
         if (presetsDi.Exists)

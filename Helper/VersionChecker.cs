@@ -217,7 +217,7 @@ public class VersionChecker
 
         SetText("GettingLatestResources", dialog, noDialog);
 
-        var resId = GetResourceID();
+        var resId = "MaaYuan";
         var currentVersion = GetResourceVersion();
         var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
         dialog?.UpdateProgress(10);
@@ -454,7 +454,7 @@ public class VersionChecker
         try
         {
             Instances.RootViewModel.SetUpdating(true);
-            var resId = GetResourceID();
+            var resId = "MaaYuan";
             if (string.IsNullOrWhiteSpace(resId))
             {
                 ToastNotification.ShowDirect("CurrentResourcesNotSupportMirror".ToLocalization());
@@ -463,7 +463,7 @@ public class VersionChecker
             var currentVersion = GetResourceVersion();
             var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
 
-            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "MFA", true, true);
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "YuanMFA", true, true);
 
             if (IsNewVersionAvailable(latestVersion, currentVersion))
             {

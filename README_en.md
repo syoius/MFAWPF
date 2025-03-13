@@ -65,8 +65,6 @@ Modify it as follows:
   "mirrorchyan_rid":  "Project ID (necessary fields downloaded from MirrorChyan)", // Default is null, for example, M9A
   "url":  "Project URL (currently only supports Github)", // Default is null, for example, https://github.com/{GithubAccount}/{GithubRepo}
   "custom_title": "Custom Title", // Default is null, after using this field, the title bar will only show custom_title and version
-  "default_controller": "adb", // Default is adb, the default controller after startup, options include adb or win32
-  "lock_controller":false, // Default is false, whether to lock the controller; when enabled, users cannot switch between adb and win32
   "resource": [
     {
       "name": "Official",
@@ -92,6 +90,10 @@ Modify it as follows:
   ]
 }
  ```
+Note that `default_controller` and `lock_controller` have been deprecated in version v1.2.7.6.
+
+The lock_controller can now be controlled via the number of controllers, while the default_controller should be accessed through controller[0].
+
 ### `doc`String Formatting：
 
 #### Use tags like`[color:red]`Text Content`[/color]` to define text styles.
@@ -155,13 +157,12 @@ Modify it as follows:
 - [Serilog](https://github.com/serilog/serilog)：C# logging library
 - [Newtonsoft.Json](https://github.com/CommunityToolkit/dotnet)：C# JSON library
 
-## Roadmap
+### Developers
 
-### v1.0
+Thanks to the following developers for their contributions to MFA:
 
-- [x] GUI interface for editing Pipelines
-- [x] Support EN
+[![Contributors](https://contrib.rocks/image?repo=SweetSmellFox/MFAWPF&max=1000)](https://github.com/SweetSmellFox/MFAWPF/graphs/contributors)
 
-### v1.2
+## Discussion
 
-- [ ] <strike>GUI interface for editing interface.json</strike>
+- MaaFW QQ Group: 595990173

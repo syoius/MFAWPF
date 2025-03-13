@@ -2,7 +2,7 @@
 using HandyControl.Controls;
 using HandyControl.Data;
 using HandyControl.Tools.Command;
-using MFAWPF.Data;
+using MFAWPF.Configuration;
 using MFAWPF.Helper;
 using MFAWPF.ViewModels.Tool;
 using System.Collections.ObjectModel;
@@ -16,7 +16,7 @@ public partial class RootViewModel : ViewModel
 {
     [ObservableProperty] private bool _idle = true;
 
-    [ObservableProperty] private bool _notLock = true;
+    [ObservableProperty] private bool _lockController = true;
 
     [ObservableProperty] private bool _isRunning;
 
@@ -25,11 +25,11 @@ public partial class RootViewModel : ViewModel
         Idle = value;
     }
     
-    [ObservableProperty] private bool _enableEdit = MFAConfiguration.GetConfiguration("EnableEdit", false);
+    [ObservableProperty] private bool _enableEdit = ConfigurationHelper.GetValue(ConfigurationKeys.EnableEdit, false);
 
     partial void OnEnableEditChanged(bool value)
     {
-        MFAConfiguration.SetConfiguration("EnableEdit", value);
+        ConfigurationHelper.SetValue(ConfigurationKeys.EnableEdit, value);
     }
 
     [ObservableProperty] private bool _isUpdating;

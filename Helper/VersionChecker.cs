@@ -2,7 +2,7 @@ using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
 using HandyControl.Controls;
-using MFAWPF.Data;
+using MFAWPF.Configuration;
 using MFAWPF.Extensions;
 using MFAWPF.Extensions.Maa;
 using MFAWPF.Helper.Converters;
@@ -29,36 +29,32 @@ namespace MFAWPF.Helper;
 public class VersionChecker
 {
     private static readonly VersionChecker Checker = new();
-    public ConcurrentQueue<ValueType.MFATask> Queue = new ConcurrentQueue<ValueType.MFATask>();
+    private static readonly ConcurrentQueue<ValueType.MFATask> Queue = new();
 
     public static void Check()
     {
         var config = new
         {
-            AutoUpdateResource = MFAConfiguration.GetConfiguration("EnableAutoUpdateResource", false),
-            AutoUpdateMFA = MFAConfiguration.GetConfiguration("EnableAutoUpdateMFA", false),
-            CheckVersion = MFAConfiguration.GetConfiguration("EnableCheckVersion", true)
+            AutoUpdateResource = ConfigurationHelper.GetValue(ConfigurationKeys.EnableAutoUpdateResource, false),
+            AutoUpdateMFA = ConfigurationHelper.GetValue(ConfigurationKeys.EnableAutoUpdateMFA, false),
+            CheckVersion = ConfigurationHelper.GetValue(ConfigurationKeys.EnableCheckVersion, true),
         };
 
         if (config.AutoUpdateResource)
         {
-            Console.WriteLine(1);
             AddResourceUpdateTask(config.AutoUpdateMFA);
         }
         else if (config.CheckVersion)
         {
-            Console.WriteLine(2);
             AddResourceCheckTask();
         }
 
         if (config.AutoUpdateMFA)
         {
-            Console.WriteLine(3);
             AddMFAUpdateTask();
         }
         else if (config.CheckVersion)
         {
-            Console.WriteLine(4);
             AddMFACheckTask();
         }
 
@@ -67,7 +63,7 @@ public class VersionChecker
     }
     private static void AddResourceCheckTask()
     {
-        Checker.Queue.Enqueue(new ValueType.MFATask
+        Queue.Enqueue(new ValueType.MFATask
         {
             Action = async () =>
             {
@@ -79,7 +75,7 @@ public class VersionChecker
 
     private static void AddMFACheckTask()
     {
-        Checker.Queue.Enqueue(new ValueType.MFATask
+        Queue.Enqueue(new ValueType.MFATask
         {
             Action = async () => Checker.CheckMFABySelection(),
             Name = "更新软件"
@@ -88,7 +84,7 @@ public class VersionChecker
 
     private static void AddResourceUpdateTask(bool autoUpdateMFA)
     {
-        Checker.Queue.Enqueue(new ValueType.MFATask
+        Queue.Enqueue(new ValueType.MFATask
         {
             Action = async () =>
             {
@@ -98,10 +94,10 @@ public class VersionChecker
         });
     }
 
-    private SemaphoreSlim _queueLock = new (1, 1);
+    private SemaphoreSlim _queueLock = new(1, 1);
     private static void AddMFAUpdateTask()
     {
-        Checker.Queue.Enqueue(new ValueType.MFATask
+        Queue.Enqueue(new ValueType.MFATask
         {
             Action = async () => Checker.UpdateMFABySelection(true),
             Name = "更新软件"
@@ -109,7 +105,7 @@ public class VersionChecker
     }
 
 
-    private async Task ExecuteTasksAsync()
+    async private Task ExecuteTasksAsync()
     {
         try
         {
@@ -127,6 +123,7 @@ public class VersionChecker
             Instances.RootViewModel.SetUpdating(false);
         }
     }
+
     public static void CheckMFAVersionAsync() => TaskManager.RunTaskAsync(() => Checker.CheckMFABySelection());
     public static void CheckResourceVersionAsync() => TaskManager.RunTaskAsync(() => Checker.CheckResourceBySelection());
     public static void UpdateResourceAsync() => TaskManager.RunTaskAsync(() => Checker.UpdateResourceBySelection());
@@ -198,7 +195,6 @@ public class VersionChecker
 
     public async Task UpdateResourceWithMirrorApi(bool closeDialog = false, bool noDialog = false, Action action = null)
     {
-        Console.WriteLine("测试1");
         Instances.RootViewModel.SetUpdating(true);
         MFAWPF.Views.UI.Dialog.DownloadDialog dialog = null;
         DispatcherHelper.RunOnMainThread(() =>
@@ -219,7 +215,7 @@ public class VersionChecker
 
         var resId = "MaaYuan";
         var currentVersion = GetResourceVersion();
-        var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
+        var cdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
         dialog?.UpdateProgress(10);
         if (string.IsNullOrWhiteSpace(resId))
         {
@@ -442,9 +438,9 @@ public class VersionChecker
                 return;
             }
             var currentVersion = GetResourceVersion();
-            var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
+            var cdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
 
-            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "YuanMFA", true, true);
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "MFA", false, true);
 
             if (IsNewVersionAvailable(latestVersion, currentVersion))
             {
@@ -566,7 +562,6 @@ public class VersionChecker
         var tempZipFilePath = Path.Combine(tempPath, $"resource_{latestVersion}.zip");
         dialog?.SetText("Downloading".ToLocalization());
         dialog?.UpdateProgress(0);
-        Console.WriteLine("资源下载");
         if (!await DownloadFileAsync(downloadUrl, tempZipFilePath, dialog, "GameResourceUpdated"))
         {
             SetText("DownloadFailed", dialog, noDialog);
@@ -588,7 +583,6 @@ public class VersionChecker
 
         ZipFile.ExtractToDirectory(tempZipFilePath, tempExtractDir);
         dialog?.UpdateProgress(50);
-        Console.WriteLine("资源解压");
         var resourcePath = Path.Combine(AppContext.BaseDirectory, "resource");
         if (Directory.Exists(resourcePath))
         {
@@ -711,7 +705,7 @@ public class VersionChecker
 
         var resId = "MaaFramework";
         var currentVersion = MaaProcessor.MaaUtility.Version;
-        var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
+        var cdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
         Instances.RootViewModel.SetUpdating(true);
         string downloadUrl = string.Empty, latestVersion = string.Empty;
         try
@@ -842,7 +836,7 @@ public class VersionChecker
 
         var resId = "YuanMFA";
         var currentVersion = GetLocalVersion();
-        var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
+        var cdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
         Instances.RootViewModel.SetUpdating(true);
         string downloadUrl = string.Empty, latestVersion = string.Empty;
         try
@@ -1072,7 +1066,7 @@ public class VersionChecker
             Instances.TaskQueueViewModel.ClearDownloadProgress();
             return;
         }
-        Console.WriteLine("测试1");
+
         ZipFile.ExtractToDirectory(tempZipFilePath, tempExtractDir);
 
         var currentExeFileName = Process.GetCurrentProcess().MainModule.ModuleName;
@@ -1192,7 +1186,7 @@ public class VersionChecker
                 var filePath = Path.Combine(resourceDirectory, AnnouncementViewModel.AnnouncementFileName);
                 File.WriteAllText(filePath, bodyContent);
                 LoggerService.LogInfo($"{AnnouncementViewModel.AnnouncementFileName} saved successfully.");
-                GlobalConfiguration.SetConfiguration("AnnouncementInfo.DoNotShowAgain", bool.FalseString);
+                GlobalConfiguration.SetValue(ConfigurationKeys.DoNotShowAgain, bool.FalseString);
             }
         }
         catch (Exception ex)
@@ -1370,7 +1364,7 @@ public class VersionChecker
         {
             var resId = "YuanMFA";
             var currentVersion = GetLocalVersion();
-            var cdk = SimpleEncryptionHelper.Decrypt(MFAConfiguration.GetConfiguration("DownloadCDK", string.Empty));
+            var cdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
             Instances.RootViewModel.SetUpdating(true);
             GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "YuanMFA", true, true);
 

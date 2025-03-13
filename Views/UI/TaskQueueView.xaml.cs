@@ -1,5 +1,5 @@
 using MaaFramework.Binding;
-using MFAWPF.Data;
+using MFAWPF.Configuration;
 using MFAWPF.Extensions;
 using MFAWPF.Extensions.Maa;
 using MFAWPF.Helper;
@@ -124,7 +124,7 @@ public partial class TaskQueueView
                             JsonConvert.SerializeObject(new Dictionary<string, TaskModel>
                             {
                                 {
-                                    "MFAWPF", new TaskModel()
+                                    "MFAWPF", new TaskModel
                                     {
                                         Action = "DoNothing"
                                     }
@@ -204,8 +204,8 @@ public partial class TaskQueueView
             var adbInputType = ConfigureAdbInputTypes();
             var adbScreenCapType = ConfigureAdbScreenCapTypes();
 
-            MaaProcessor.MaaFwConfig.AdbDevice.Input = adbInputType;
-            MaaProcessor.MaaFwConfig.AdbDevice.ScreenCap = adbScreenCapType;
+            MaaProcessor.MaaFwConfiguration.AdbDevice.Input = adbInputType;
+            MaaProcessor.MaaFwConfiguration.AdbDevice.ScreenCap = adbScreenCapType;
 
             LoggerService.LogInfo(
                 $"{LocExtension.GetLocalizedValue<string>("AdbInputMode")}{adbInputType},{LocExtension.GetLocalizedValue<string>("AdbCaptureMode")}{adbScreenCapType}");
@@ -237,8 +237,8 @@ public partial class TaskQueueView
             var win32InputType = ConfigureWin32InputTypes();
             var winScreenCapType = ConfigureWin32ScreenCapTypes();
 
-            MaaProcessor.MaaFwConfig.DesktopWindow.Input = win32InputType;
-            MaaProcessor.MaaFwConfig.DesktopWindow.ScreenCap = winScreenCapType;
+            MaaProcessor.MaaFwConfiguration.DesktopWindow.Input = win32InputType;
+            MaaProcessor.MaaFwConfiguration.DesktopWindow.ScreenCap = winScreenCapType;
 
             LoggerService.LogInfo(
                 $"{"AdbInputMode".ToLocalization()}{win32InputType},{"AdbCaptureMode".ToLocalization()}{winScreenCapType}");
@@ -255,14 +255,12 @@ public partial class TaskQueueView
         return Instances.ConnectSettingsUserControlModel.Win32ControlInputType;
     }
 
-    public bool FirstTask = true;
+    private bool FirstTask = true;
 
-    private void LoadTasks(List<TaskInterfaceItem>? tasks, IList<DragItemViewModel>? oldDrags = null)
+    private void LoadTasks(List<TaskInterfaceItem> tasks, IList<DragItemViewModel>? oldDrags = null)
     {
-        var items = MFAConfiguration.GetConfiguration("TaskItems", new List<TaskInterfaceItem>()) ?? [];
+        var items = ConfigurationHelper.GetValue(ConfigurationKeys.TaskItems, new List<TaskInterfaceItem>()) ?? [];
         var drags = (oldDrags?.ToList() ?? []).Union(items.Select(interfaceItem => new DragItemViewModel(interfaceItem))).ToList();
-
-        if (tasks is null) return;
         
         if (FirstTask)
         {
@@ -300,8 +298,9 @@ public partial class TaskQueueView
         var newDict = tasks.ToDictionary(t => t.Name);
         var removeList = new List<DragItemViewModel>();
         var updateList = new List<DragItemViewModel>();
-
-        foreach (var oldItem in drags.Where(x => !string.IsNullOrWhiteSpace(x.Name)))
+        if (drags.Count == 0)
+            updateList.AddRange(tasks.Select(t => new DragItemViewModel(t)).ToList());
+        else foreach (var oldItem in drags.Where(x => !string.IsNullOrWhiteSpace(x.Name)))
         {
             if (!newDict.TryGetValue(oldItem.Name, out var newItem))
             {
@@ -320,7 +319,10 @@ public partial class TaskQueueView
     {
         if (oldItem.InterfaceItem == null) return;
         oldItem.InterfaceItem.Entry = newItem.Entry;
-
+        oldItem.InterfaceItem.PipelineOverride = newItem.PipelineOverride;
+        oldItem.InterfaceItem.Document = newItem.Document;
+        oldItem.InterfaceItem.Repeatable = newItem.Repeatable;
+        
         if (newItem.Option == null) return;
 
         var tempDict = oldItem.InterfaceItem.Option?.ToDictionary(t => t.Name) ?? new Dictionary<string, MaaInterface.MaaInterfaceSelectOption>();
@@ -350,7 +352,6 @@ public partial class TaskQueueView
 
     private void UpdateViewModels(IList<DragItemViewModel> drags, List<TaskInterfaceItem> tasks)
     {
-
         var newItems = tasks.Select(t => new DragItemViewModel(t)).ToList();
         foreach (var item in newItems)
         {
@@ -359,6 +360,7 @@ public partial class TaskQueueView
                 item.InterfaceItem.Option.ForEach(SetDefaultOptionValue);
             }
         }
+        
         ViewModel.TasksSource.AddRange(newItems);
 
 
@@ -411,7 +413,7 @@ public partial class TaskQueueView
         if (Instances.ConnectingViewModel.CurrentDevice == null)
         {
             GrowlHelper.Warning(
-                "Warning_CannotConnect".ToLocalizationFormatted(Instances.ConnectingViewModel.CurrentController == MaaControllerTypes.Adb
+                "Warning_CannotConnect".ToLocalizationFormatted(true,Instances.ConnectingViewModel.CurrentController == MaaControllerTypes.Adb
                     ? "Emulator".ToLocalization()
                     : "Window".ToLocalization()));
             return;
@@ -442,7 +444,7 @@ public partial class TaskQueueView
         if (addTaskDialog.OutputContent != null)
         {
             ViewModel.TaskItemViewModels.Add(addTaskDialog.OutputContent.Clone());
-            MFAConfiguration.SetConfiguration("TaskItems", ViewModel.TaskItemViewModels.ToList().Select(model => model.InterfaceItem));
+            ConfigurationHelper.SetValue(ConfigurationKeys.TaskItems, ViewModel.TaskItemViewModels.ToList().Select(model => model.InterfaceItem));
         }
     }
     private void Delete(object sender, RoutedEventArgs e)
@@ -456,7 +458,7 @@ public partial class TaskQueueView
                 int index = ViewModel.TaskItemViewModels.IndexOf(taskItemViewModel);
                 ViewModel.TaskItemViewModels.RemoveAt(index);
                 Instances.TaskOptionSettingsUserControl.SetOption(taskItemViewModel, false);
-                MFAConfiguration.SetConfiguration("TaskItems", ViewModel.TaskItemViewModels.ToList().Select(model => model.InterfaceItem));
+                ConfigurationHelper.SetValue(ConfigurationKeys.TaskItems, ViewModel.TaskItemViewModels.ToList().Select(model => model.InterfaceItem));
             }
         }
     }

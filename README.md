@@ -67,8 +67,6 @@
   "mirrorchyan_rid":  "项目ID(从Mirror酱下载的必要字段)", //默认为null , 比如 M9A
   "url":  "项目链接(目前应该只支持Github)", //默认为null , 比如 https://github.com/{Github账户}/{Github项目}
   "custom_title": "自定义标题", //默认为null, 使用该字段后，标题栏将只显示custom_title和version
-  "default_controller": "adb", //默认为adb, 启动后的默认控制器，可选项 adb , win32
-  "lock_controller":false, //默认为false, 是否锁定控制器，开启后用户不能在adb和win32中切换控制器
   "resource": [
     {
       "name": "官服",
@@ -158,13 +156,13 @@
 - [Serilog](https://github.com/serilog/serilog)：C# 日志记录库
 - [Newtonsoft.Json](https://github.com/CommunityToolkit/dotnet)：C# JSON 库
 
-## 画大饼
+### 开发者
 
-### v1.0
+感谢以下开发者对 MFA 作出的贡献：
 
 - [x] Pipeline 的 GUI 编辑界面
 - [x] Support EN
 
-### v1.2
+## 讨论
 
 - [ ] <strike>interface.json 的 GUI 编辑界面</strike>

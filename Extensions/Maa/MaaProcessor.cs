@@ -6,9 +6,10 @@ using MaaFramework.Binding.Custom;
 using MaaFramework.Binding.Notification;
 using MailKit.Net.Smtp;
 using MailKit.Security;
-using MFAWPF.Data;
+using MFAWPF.Configuration;
 using MFAWPF.Helper;
 using MFAWPF.Helper.ValueType;
+using MFAWPF.ViewModels.UserControl.Settings;
 using MFAWPF.Views.UI;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -38,28 +39,20 @@ namespace MFAWPF.Extensions.Maa;
 public class MaaProcessor
 {
     private static MaaProcessor? _instance;
-    private CancellationTokenSource? _cancellationTokenSource;
 
     public static MaaUtility MaaUtility { get; } = new();
     public static MaaToolkit MaaToolkit { get; } = new(init: true);
-    public bool IsStopped
-    {
-        get;
-        set;
-    }
 
-    public CancellationTokenSource? CancellationTokenSource => _cancellationTokenSource;
+    public CancellationTokenSource? CancellationTokenSource { get; set; } = new();
+
     private MaaTasker? _currentTasker;
 
     public static string Resource => AppContext.BaseDirectory + "Resource";
-    public static string ModelResource => $"{Resource}/model/";
     public static string ResourceBase => $"{Resource}/base";
-    public static string ResourcePipelineFilePath => $"{ResourceBase}/pipeline/";
 
     public Queue<MFATask> TaskQueue { get; } = new();
-    public static int Money { get; set; } = 0;
-    public static int AllMoney { get; set; }
-    public static MaaFWConfig MaaFwConfig { get; } = new();
+
+    public static MaaFWConfiguration MaaFwConfiguration { get; } = new();
 
     public static AutoInitDictionary AutoInitDictionary { get; } = new();
 
@@ -87,44 +80,44 @@ public class MaaProcessor
 
     private DateTime? _startTime;
 
+    public static int Money { get; set; } = 0;
 
     public async Task Start(List<DragItemViewModel>? tasks, bool onlyStart = false, bool checkUpdate = false)
     {
+        CancellationTokenSource = new CancellationTokenSource();
         SetCurrentTasker();
         Instances.RootViewModel.SetIdle(false);
 
         _startTime = DateTime.Now;
-        IsStopped = false;
         tasks ??= new List<DragItemViewModel>();
 
-        using (_cancellationTokenSource = new CancellationTokenSource())
+
+        var token = CancellationTokenSource.Token;
+        var taskAndParams = tasks.Select(CreateTaskAndParam).ToList();
+
+        if (!onlyStart)
         {
-            var token = _cancellationTokenSource.Token;
-            var taskAndParams = tasks.Select(CreateTaskAndParam).ToList();
-
-            if (!onlyStart)
-            {
-                await InitializeConnectionTasksAsync(token);
-                await AddCoreTasksAsync(taskAndParams);
-                await AddPostTasksAsync(checkUpdate);
-            }
-
-            await TaskManager.RunTaskAsync(async () =>
-            {
-                var runSuccess = await ExecuteTasks(token);
-                if (runSuccess)
-                {
-                    Stop(IsStopped, onlyStart);
-                }
-            }, null, "启动任务");
+            await InitializeConnectionTasksAsync(token);
+            await AddCoreTasksAsync(taskAndParams, token);
+            await AddPostTasksAsync(checkUpdate, token);
         }
+
+        await TaskManager.RunTaskAsync(async () =>
+        {
+            var runSuccess = await ExecuteTasks(token);
+            if (runSuccess)
+            {
+                Stop(true, onlyStart);
+            }
+        }, token, name: "启动任务");
+
     }
 
     async private Task InitializeConnectionTasksAsync(CancellationToken token)
     {
         TaskQueue.Push(CreateMFATask("启动脚本", async () =>
         {
-            await Task.Run(() => Instances.RootView.RunScript(), token);
+            await TaskManager.RunTaskAsync(() => Instances.RootView.RunScript(), token);
         }));
 
         TaskQueue.Push(CreateMFATask("连接设备", async () =>
@@ -134,7 +127,7 @@ public class MaaProcessor
 
         TaskQueue.Push(CreateMFATask("性能基准", async () =>
         {
-            await MeasureScreencapPerformanceAsync();
+            await MeasureScreencapPerformanceAsync(token);
         }));
     }
 
@@ -143,9 +136,9 @@ public class MaaProcessor
         var controllerType = Instances.ConnectingViewModel.CurrentController;
         var isAdb = controllerType == MaaControllerTypes.Adb;
 
-        RootView.AddLogByKey("ConnectingTo", null, isAdb ? "Emulator" : "Window");
+        RootView.AddLogByKey("ConnectingTo", null, true, isAdb ? "Emulator" : "Window");
 
-        var (connected, instance) = await TryConnectAsync(token);
+        var connected = await TryConnectAsync(token);
 
         if (!connected && isAdb)
         {
@@ -154,7 +147,7 @@ public class MaaProcessor
 
         if (!connected)
         {
-            await HandleConnectionFailureAsync(isAdb);
+            await HandleConnectionFailureAsync(isAdb, token);
             throw new Exception("Connection failed after all retries");
         }
 
@@ -182,54 +175,52 @@ public class MaaProcessor
         return connected;
     }
 
-    async private Task<bool> RetryConnectionAsync(CancellationToken token, Action action, string logKey, bool enable = true)
+    async private Task<bool> RetryConnectionAsync(CancellationToken token, Func<Task> action, string logKey, bool enable = true)
     {
         if (!enable) return false;
+        token.ThrowIfCancellationRequested();
         RootView.AddLog("ConnectFailed".ToLocalization() + "\n" + logKey.ToLocalization());
-        action.Invoke();
-
+        await action();
         if (token.IsCancellationRequested)
         {
             Stop();
             return false;
         }
 
-        return (await TryConnectAsync(token)).connected;
+        return await TryConnectAsync(token);
     }
 
-    async private Task HandleConnectionFailureAsync(bool isAdb)
+    async private Task HandleConnectionFailureAsync(bool isAdb, CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
         LoggerService.LogWarning("ConnectFailed".ToLocalization());
         RootView.AddLogByKey("ConnectFailed");
         Instances.ConnectingViewModel.SetConnected(false);
-        GrowlHelper.Warning("Warning_CannotConnect".ToLocalizationFormatted(isAdb ? "Emulator" : "Window"));
+        GrowlHelper.Warning("Warning_CannotConnect".ToLocalizationFormatted(true, isAdb ? "Emulator" : "Window"));
         Stop();
     }
 
-    async private Task AddCoreTasksAsync(List<TaskAndParam> taskAndParams)
+    async private Task AddCoreTasksAsync(List<TaskAndParam> taskAndParams, CancellationToken token)
     {
         foreach (var task in taskAndParams)
         {
-            TaskQueue.Push(new MFATask
-            {
-                Name = task.Name,
-                Type = MFATask.MFATaskType.MAAFW,
-                Count = task.Count ?? 1,
-                Action = async () =>
+            TaskQueue.Push(CreateMaaFWTask(task.Name,
+                async () =>
                 {
+                    token.ThrowIfCancellationRequested();
                     if (task.Tasks != null)
                         Instances.TaskQueueView.TaskDictionary = task.Tasks;
-                    await TryRunTasksAsync(_currentTasker, task.Entry, task.Param);
-                }
-            });
+                    await TryRunTasksAsync(_currentTasker, task.Entry, task.Param, token);
+                }, task.Count ?? 1
+            ));
         }
     }
 
-    async private Task AddPostTasksAsync(bool checkUpdate)
+    async private Task AddPostTasksAsync(bool checkUpdate, CancellationToken token)
     {
         TaskQueue.Push(CreateMFATask("结束脚本", async () =>
         {
-            await Task.Run(() => Instances.RootView.RunScript("Post-script"));
+            await TaskManager.RunTaskAsync(() => Instances.RootView.RunScript("Post-script"), token);
         }));
 
         if (checkUpdate)
@@ -240,241 +231,140 @@ public class MaaProcessor
             }));
         }
     }
+    private MFATask CreateMaaFWTask(string? name, Func<Task> action, int count = 1)
+    {
+        return new MFATask
+        {
+            Name = name,
+            Count = 1,
+            Type = MFATask.MFATaskType.MAAFW,
+            Action = action
+        };
+    }
 
-    private MFATask CreateMFATask(string name, Func<Task> action)
+    private MFATask CreateMFATask(string? name, Func<Task> action)
     {
         return new MFATask
         {
             Name = name,
             Type = MFATask.MFATaskType.MFA,
-            Action = async () =>
-            {
-                try
-                {
-                    await action();
-                }
-                catch (OperationCanceledException)
-                {
-                    RootView.AddLogByKey("TaskCancelled", null, name);
-                }
-            }
+            Action = action
         };
     }
 
-    async public Task MeasureScreencapPerformanceAsync()
+    async public Task MeasureScreencapPerformanceAsync(CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
         await MeasureExecutionTimeAsync(async () =>
             _currentTasker?.Controller.Screencap().Wait());
     }
 
-    async private Task<(bool connected, MaaTasker? instance)> TryConnectAsync(CancellationToken token)
+    async private Task<bool> TryConnectAsync(CancellationToken token)
     {
-        var instance = await Task.Run(GetCurrentTasker, token);
-        return (instance is { Initialized: true }, instance);
+        token.ThrowIfCancellationRequested();
+        var instance = await GetCurrentTaskerAsync(token);
+        return instance is { Initialized: true };
     }
 
-    async private Task TryRunTasksAsync(MaaTasker? maa, string? task, string? param)
+    async private Task TryRunTasksAsync(MaaTasker? maa, string? task, string? param, CancellationToken token)
     {
         if (maa == null || task == null) return;
 
         var job = maa.AppendTask(task, param ?? "{}");
-        await Task.Run(() => job.Wait().ThrowIfNot(MaaJobStatus.Succeeded));
+        await TaskManager.RunTaskAsync(() => job.Wait().ThrowIfNot(MaaJobStatus.Succeeded), token, catchException: true, shouldLog: false);
     }
 
-    public void Stop(bool setIsStopped = true, bool onlyStart = false)
+    public void Stop(bool finished = false, bool onlyStart = false)
     {
-        _emulatorCancellationTokenSource?.Cancel();
-
-        if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
+        try
         {
-            IsStopped = setIsStopped;
-            _cancellationTokenSource?.Cancel();
-            TaskManager.RunTaskAsync(() =>
+            if (!ShouldProcessStop(finished))
             {
-                if (IsStopped)
-                    RootView.AddLogByKey("Stopping");
-                if (_currentTasker == null || _currentTasker?.Abort().Wait() == MaaJobStatus.Succeeded)
-                {
-                    DisplayTaskCompletionMessage(onlyStart);
-                    Instances.RootViewModel.SetIdle(true);
-                }
-                else
-                {
-                    GrowlHelper.Error("StoppingFailed".ToLocalization());
-                }
-            }, null, "停止任务");
-            TaskQueue.Clear();
-            OnTaskQueueChanged();
+                GrowlHelper.Warning("NoTaskToStop".ToLocalization());
+
+                ClearTaskQueue();
+                return;
+            }
+
+            CancelOperations();
+
+            ClearTaskQueue();
+
+            ExecuteStopCore(finished, () =>
+            {
+                var stopResult = AbortCurrentTasker();
+                HandleStopResult(finished, stopResult, onlyStart);
+            });
+
+        }
+        catch (Exception ex)
+        {
+            HandleStopException(ex);
+        }
+    }
+
+    #region Stop Helpers
+
+    private void CancelOperations()
+    {
+        _emulatorCancellationTokenSource?.SafeCancel();
+        CancellationTokenSource.SafeCancel();
+    }
+
+    private bool ShouldProcessStop(bool finished)
+    {
+        return (CancellationTokenSource?.IsCancellationRequested).IsFalse()
+            || finished;
+    }
+
+    private void ExecuteStopCore(bool finished, Action stopAction)
+    {
+        TaskManager.RunTaskAsync(() =>
+        {
+            if (!finished)
+                RootView.AddLogByKey("Stopping");
+
+            stopAction.Invoke();
+
+            Instances.RootViewModel.SetIdle(true);
+        }, null, "停止任务");
+    }
+
+    private bool AbortCurrentTasker()
+    {
+        return _currentTasker == null || _currentTasker.Abort().Wait() == MaaJobStatus.Succeeded;
+    }
+
+    private void HandleStopResult(bool finished, bool success, bool onlyStart)
+    {
+        if (success)
+        {
+            DisplayTaskCompletionMessage(finished, onlyStart);
         }
         else
         {
-            if (setIsStopped)
-            {
-                GrowlHelper.Warning("NoTaskToStop".ToLocalization());
-                TaskQueue.Clear();
-                OnTaskQueueChanged();
-            }
+            GrowlHelper.Error("StoppingFailed".ToLocalization());
         }
     }
-    async private static Task<bool> DingTalkMessageAsync(string accessToken, string secret)
+
+    private void ClearTaskQueue()
     {
-        var timestamp = GetTimestamp();
-        var sign = CalculateSignature(timestamp, secret);
-        var message = new
-        {
-            msgtype = "text",
-            text = new
-            {
-                content = "TaskAllCompleted".ToLocalization()
-            }
-        };
-
-        try
-        {
-            var apiUrl = $"https://oapi.dingtalk.com/robot/send?access_token={accessToken}&timestamp={timestamp}&sign={sign}";
-            using var client = new HttpClient();
-            var content = new StringContent(JsonConvert.SerializeObject(message), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(apiUrl, content);
-
-            if (response.IsSuccessStatusCode)
-            {
-                LoggerService.LogInfo("Message sent successfully");
-                return true;
-            }
-
-            LoggerService.LogError($"Message sending failed: {response.StatusCode} {await response.Content.ReadAsStringAsync()}");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            LoggerService.LogError($"Error sending message: {ex.Message}");
-            return false;
-        }
+        TaskQueue.Clear();
+        OnTaskQueueChanged();
     }
 
-    public static void SendEmail(string email, string password)
+    private void HandleStopException(Exception ex)
     {
-        try
-        {
-            var smtpConfig = GetSmtpConfigByEmail(email);
-
-            var mail = new MimeMessage();
-            mail.From.Add(new MailboxAddress("", email));
-            mail.To.Add(new MailboxAddress("", email));
-            mail.Subject = "TaskAllCompleted".ToLocalization();
-            mail.Body = new TextPart(MimeKit.Text.TextFormat.Plain)
-            {
-                Text = "TaskAllCompleted".ToLocalization()
-            };
-
-            using var client = new SmtpClient();
-
-            client.Connect(
-                smtpConfig.Host,
-                smtpConfig.Port,
-                smtpConfig.UseSSL ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.Auto
-            );
-
-            client.Authenticate(email, password);
-
-            client.Send(mail);
-
-            client.Disconnect(true);
-        }
-        catch (AuthenticationException ex)
-        {
-            LoggerService.LogError($"认证失败: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            LoggerService.LogError($"未知错误: {ex.Message}");
-        }
+        LoggerService.LogError($"Stop operation failed: {ex.Message}");
+        GrowlHelper.Error("StopOperationFailed".ToLocalization());
     }
 
-    private static (string Host, int Port, bool UseSSL, string Notes) GetSmtpConfigByEmail(string email)
-    {
-        if (!email.Contains('@') || email.Split('@').Length != 2)
-            throw new ArgumentException("无效的邮箱地址格式");
+    #endregion
 
-        string domain = email.Split('@')[1].ToLower().Trim();
-
-
-        var smtpConfigs = new Dictionary<string, (string Host, int Port, bool UseSSL, string Notes)>()
-        {
-            // 国内邮箱
-            ["qq.com"] = ("smtp.qq.com", 465, true, "需使用授权码，非QQ密码"),
-            ["163.com"] = ("smtp.163.com", 465, true, "25端口可能被运营商屏蔽"),
-            ["126.com"] = ("smtp.126.com", 465, true, ""),
-            ["sina.com"] = ("smtp.sina.com.cn", 465, true, ""),
-            ["aliyun.com"] = ("smtp.aliyun.com", 465, true, ""),
-
-
-            ["gmail.com"] = ("smtp.gmail.com", 587, true, "需开启两步验证并创建应用密码"),
-            ["outlook.com"] = ("smtp.office365.com", 587, true, "支持Microsoft全家桶邮箱"),
-            ["hotmail.com"] = ("smtp.office365.com", 587, true, ""),
-            ["live.com"] = ("smtp.office365.com", 587, true, ""),
-            ["yahoo.com"] = ("smtp.mail.yahoo.com", 465, true, "2024年后需付费使用SMTP"),
-            ["icloud.com"] = ("smtp.mail.me.com", 587, true, "需生成应用专用密码"),
-
-            ["edu.cn"] = ("smtptt.[DOMAIN]", 465, true, "自动替换域名，如：smtptt.tsinghua.edu.cn"),
-            ["gov.cn"] = ("mail.[DOMAIN]", 25, false, "通常使用非加密端口")
-        };
-
-        if (smtpConfigs.TryGetValue(domain, out var config))
-        {
-            return HandleSpecialCases(domain, config);
-        }
-
-        foreach (var key in smtpConfigs.Keys.Where(k => k.Contains('.') && !k.StartsWith(".")))
-        {
-            if (domain.EndsWith($".{key}"))
-            {
-                var customConfig = smtpConfigs[key];
-                customConfig.Host = customConfig.Host.Replace("[DOMAIN]", domain);
-                return customConfig;
-            }
-        }
-
-        throw new Exception("Email not supported");
-    }
-
-
-    private static (string Host, int Port, bool UseSSL, string Notes) HandleSpecialCases(
-        string domain,
-        (string Host, int Port, bool UseSSL, string Notes) config)
-    {
-        if (domain == "163.com" || domain == "126.com")
-        {
-            return config with
-            {
-                Port = 994
-            };
-        }
-        return config;
-    }
-
-    public async static Task ExternalNotificationAsync()
-    {
-        var enabledProviders = Instances.ExternalNotificationSettingsUserControlModel.EnabledExternalNotificationProviderList;
-
-        foreach (var enabledProvider in enabledProviders)
-        {
-            switch (enabledProvider)
-            {
-                case "DingTalk":
-                    await DingTalkMessageAsync(Instances.ExternalNotificationSettingsUserControlModel.DingTalkToken, Instances.ExternalNotificationSettingsUserControlModel.DingTalkSecret);
-                    break;
-                case "Email":
-                    SendEmail(Instances.ExternalNotificationSettingsUserControlModel.EmailAccount, Instances.ExternalNotificationSettingsUserControlModel.EmailSecret);
-                    break;
-            }
-        }
-    }
 
     public void HandleAfterTaskOperation()
     {
-        if (IsStopped) return;
-        var afterTask = MFAConfiguration.GetConfiguration("AfterTask", "None");
+        var afterTask = ConfigurationHelper.GetValue(ConfigurationKeys.AfterTask, "None");
         switch (afterTask)
         {
             case "CloseMFA":
@@ -503,14 +393,14 @@ public class MaaProcessor
 
     private static Process? _softwareProcess;
 
-    public void StartSoftware()
+    public async Task StartSoftware()
     {
         _emulatorCancellationTokenSource = new CancellationTokenSource();
-        StartRunnableFile(MFAConfiguration.GetConfiguration("SoftwarePath", string.Empty),
-            MFAConfiguration.GetConfiguration("WaitSoftwareTime", 60.0), _emulatorCancellationTokenSource.Token);
+        await StartRunnableFile(ConfigurationHelper.GetValue(ConfigurationKeys.SoftwarePath, string.Empty),
+            ConfigurationHelper.GetValue(ConfigurationKeys.WaitSoftwareTime, 60.0), _emulatorCancellationTokenSource.Token);
     }
 
-    private void StartRunnableFile(string exePath, double waitTimeInSeconds, CancellationToken token)
+    async private Task StartRunnableFile(string exePath, double waitTimeInSeconds, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
             return;
@@ -523,9 +413,9 @@ public class MaaProcessor
         };
         if (Process.GetProcessesByName(processName).Length == 0)
         {
-            if (!string.IsNullOrWhiteSpace(MFAConfiguration.GetConfiguration("EmulatorConfig", string.Empty)))
+            if (!string.IsNullOrWhiteSpace(ConfigurationHelper.GetValue(ConfigurationKeys.EmulatorConfig, string.Empty)))
             {
-                startInfo.Arguments = MFAConfiguration.GetConfiguration("EmulatorConfig", string.Empty);
+                startInfo.Arguments = ConfigurationHelper.GetValue(ConfigurationKeys.EmulatorConfig, string.Empty);
                 _softwareProcess =
                     Process.Start(startInfo);
             }
@@ -534,9 +424,9 @@ public class MaaProcessor
         }
         else
         {
-            if (!string.IsNullOrWhiteSpace(MFAConfiguration.GetConfiguration("EmulatorConfig", string.Empty)))
+            if (!string.IsNullOrWhiteSpace(ConfigurationHelper.GetValue(ConfigurationKeys.EmulatorConfig, string.Empty)))
             {
-                startInfo.Arguments = MFAConfiguration.GetConfiguration("EmulatorConfig", string.Empty);
+                startInfo.Arguments = ConfigurationHelper.GetValue(ConfigurationKeys.EmulatorConfig, string.Empty);
                 _softwareProcess = Process.Start(startInfo);
             }
             else
@@ -552,7 +442,7 @@ public class MaaProcessor
 
             if (remainingTime % 10 == 0)
             {
-                RootView.AddLogByKey("WaitSoftwareTime", null,
+                RootView.AddLogByKey("WaitSoftwareTime", null, true,
                     Instances.ConnectingViewModel.CurrentController == MaaControllerTypes.Adb
                         ? "Emulator"
                         : "Window",
@@ -560,20 +450,14 @@ public class MaaProcessor
                 );
             }
 
-            try
-            {
-                Thread.Sleep(1000);
-            }
-            catch
-            {
-            }
+            await Task.Delay(1000, token);
         }
 
     }
 
     private static string GetCommandLine(Process process)
     {
-        return GetCommandLine(process.Id); // 这里可能需要用 WMI 方法获取参数
+        return GetCommandLine(process.Id);
     }
 
     private static string GetCommandLine(int processId)
@@ -606,7 +490,7 @@ public class MaaProcessor
             }
             else
             {
-                CloseProcessesByName(MaaFwConfig.DesktopWindow.Name, MFAConfiguration.GetConfiguration("EmulatorConfig", string.Empty));
+                CloseProcessesByName(MaaFwConfiguration.DesktopWindow.Name, ConfigurationHelper.GetValue(ConfigurationKeys.EmulatorConfig, string.Empty));
                 _softwareProcess = null;
             }
 
@@ -656,7 +540,7 @@ public class MaaProcessor
     public static void RestartMFA(bool noAutoStart = false)
     {
         if (noAutoStart)
-            GlobalConfiguration.SetConfiguration("NoAutoStart", bool.TrueString);
+            GlobalConfiguration.SetValue("NoAutoStart", bool.TrueString);
         Process.Start(Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty);
         DispatcherHelper.RunOnMainThread(Application.Current.Shutdown);
     }
@@ -671,48 +555,6 @@ public class MaaProcessor
     {
         CloseSoftware();
         RestartMFA();
-    }
-
-    static string GetTimestamp()
-    {
-        return ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeMilliseconds().ToString();
-    }
-
-    private static string CalculateSignature(string timestamp, string secret)
-    {
-        string stringToSign = $"{timestamp}\n{secret}";
-
-        byte[] secretBytes = Encoding.UTF8.GetBytes(secret);
-        byte[] stringToSignBytes = Encoding.UTF8.GetBytes(stringToSign);
-
-        byte[] hmacCode = ComputeHmacSha256(secretBytes, stringToSignBytes);
-        string base64Encoded = Convert.ToBase64String(hmacCode);
-        string sign = WebUtility.UrlEncode(base64Encoded).Replace("+", "%20").Replace("/", "%2F").Replace("=", "%3D");
-        return sign;
-    }
-
-    static byte[] ComputeHmacSha256(byte[] key, byte[] data)
-    {
-        using var hmacsha256 = new HMACSHA256(key);
-        return hmacsha256.ComputeHash(data);
-
-    }
-
-    static Dictionary<string, string> ReadConfigFile(string filePath)
-    {
-        var config = new Dictionary<string, string>();
-        string[] lines = File.ReadAllLines(filePath);
-
-        foreach (var line in lines)
-        {
-            var parts = line.Split('=');
-            if (parts.Length == 2)
-            {
-                config[parts[0].Trim()] = parts[1].Trim();
-            }
-        }
-
-        return config;
     }
 
     private TaskAndParam CreateTaskAndParam(DragItemViewModel task)
@@ -778,9 +620,8 @@ public class MaaProcessor
         {
             return JsonConvert.SerializeObject(taskModels, settings);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            Console.WriteLine(e);
             return "{}";
         }
     }
@@ -797,17 +638,17 @@ public class MaaProcessor
         switch (elapsedMilliseconds)
         {
             case >= 800:
-                RootView.AddLogByKey("ToScreencapErrorTip", new BrushConverter().ConvertFromString("DarkGoldenrod") as Brush, elapsedMilliseconds.ToString(),
+                RootView.AddLogByKey("ScreencapErrorTip", BrushConverterHelper.ConvertToBrush("DarkGoldenrod"), false, elapsedMilliseconds.ToString(),
                     Instances.TaskQueueView.ScreenshotType());
                 break;
 
             case >= 400:
-                RootView.AddLogByKey("ScreencapWarningTip", new BrushConverter().ConvertFromString("DarkGoldenrod") as Brush, elapsedMilliseconds.ToString(),
+                RootView.AddLogByKey("ScreencapWarningTip", BrushConverterHelper.ConvertToBrush("DarkGoldenrod"), false, elapsedMilliseconds.ToString(),
                     Instances.TaskQueueView.ScreenshotType());
                 break;
 
             default:
-                RootView.AddLogByKey("ScreencapCost", null, elapsedMilliseconds.ToString(),
+                RootView.AddLogByKey("ScreencapCost", null, false, elapsedMilliseconds.ToString(),
                     Instances.TaskQueueView.ScreenshotType());
                 break;
         }
@@ -834,17 +675,17 @@ public class MaaProcessor
         switch (avgElapsed)
         {
             case >= 800:
-                RootView.AddLogByKey("ToScreencapErrorTip", new BrushConverter().ConvertFromString("DarkGoldenrod") as Brush, avgElapsed.ToString(),
+                RootView.AddLogByKey("ScreencapErrorTip", BrushConverterHelper.ConvertToBrush("DarkGoldenrod"), false, avgElapsed.ToString(),
                     Instances.TaskQueueView.ScreenshotType());
                 break;
 
             case >= 400:
-                RootView.AddLogByKey("ScreencapWarningTip", new BrushConverter().ConvertFromString("DarkGoldenrod") as Brush, avgElapsed.ToString(),
+                RootView.AddLogByKey("ScreencapWarningTip", BrushConverterHelper.ConvertToBrush("DarkGoldenrod"), false, avgElapsed.ToString(),
                     Instances.TaskQueueView.ScreenshotType());
                 break;
 
             default:
-                RootView.AddLogByKey("ScreencapCost", null, avgElapsed.ToString(),
+                RootView.AddLogByKey("ScreencapCost", null, false, avgElapsed.ToString(),
                     Instances.TaskQueueView.ScreenshotType());
                 break;
         }
@@ -853,28 +694,24 @@ public class MaaProcessor
 
     async private Task<bool> ExecuteTasks(CancellationToken token)
     {
-        while (TaskQueue.Count > 0)
+        while (TaskQueue.Count > 0 && !token.IsCancellationRequested)
         {
-            if (token.IsCancellationRequested) return false;
             var task = TaskQueue.Dequeue();
-            if (!task.Run())
+            if (!await task.Run(token))
             {
-                if (IsStopped) return false;
+                return false;
             }
-
             OnTaskQueueChanged();
         }
-
-        return true;
+        return !token.IsCancellationRequested; // 根据取消状态返回正确结果
     }
 
-    private void DisplayTaskCompletionMessage(bool onlyStart = false)
+    private void DisplayTaskCompletionMessage(bool finished, bool onlyStart = false)
     {
-        if (IsStopped)
+        if (!finished)
         {
             Growl.Info("TaskStopped".ToLocalization());
             RootView.AddLogByKey("TaskAbandoned");
-            IsStopped = false;
         }
         else
         {
@@ -882,7 +719,7 @@ public class MaaProcessor
             if (_startTime != null)
             {
                 var elapsedTime = DateTime.Now - (DateTime)_startTime;
-                RootView.AddLogByKey("TaskAllCompletedWithTime", null, ((int)elapsedTime.TotalHours).ToString(),
+                RootView.AddLogByKey("TaskAllCompletedWithTime", null, true, ((int)elapsedTime.TotalHours).ToString(),
                     ((int)elapsedTime.TotalMinutes % 60).ToString(), ((int)elapsedTime.TotalSeconds % 60).ToString());
             }
             else
@@ -891,7 +728,7 @@ public class MaaProcessor
             }
             if (!onlyStart)
             {
-                ExternalNotificationAsync();
+                ExternalNotificationHelper.ExternalNotificationAsync();
                 HandleAfterTaskOperation();
             }
         }
@@ -904,16 +741,25 @@ public class MaaProcessor
         TaskStackChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public MaaTasker GetCurrentTasker()
+    public MaaTasker? GetCurrentTasker(CancellationToken token = default)
     {
-        return _currentTasker ??= InitializeMaaTasker();
+        var task = GetCurrentTaskerAsync(token);
+        task.Wait(token);
+        return task.Result;
     }
+
+    public async Task<MaaTasker?> GetCurrentTaskerAsync(CancellationToken token = default)
+    {
+        _currentTasker ??= await InitializeMaaTasker(token);
+        return _currentTasker;
+    }
+
     public bool HasTasker()
     {
         return _currentTasker != null;
     }
 
-    public void SetCurrentTasker(MaaTasker tasker = null)
+    public void SetCurrentTasker(MaaTasker? tasker = null)
     {
         _currentTasker = tasker;
     }
@@ -981,49 +827,67 @@ public class MaaProcessor
         }
     }
 
-    private MaaTasker? InitializeMaaTasker()
+    async private Task<MaaTasker?> InitializeMaaTasker(CancellationToken token) // 添加 async 和 token
     {
-        AutoInitDictionary.Clear();
 
+        AutoInitDictionary.Clear();
         LoggerService.LogInfo("LoadingResources".ToLocalization());
-        MaaResource maaResource;
+
+        MaaResource maaResource = null;
         try
         {
-            var resources = Instances.GameSettingsUserControlModel.CurrentResources.FirstOrDefault(c => c.Name == Instances.GameSettingsUserControlModel.CurrentResource)?.Path ?? [];
+            var resources = Instances.GameSettingsUserControlModel.CurrentResources
+                    .FirstOrDefault(c => c.Name == Instances.GameSettingsUserControlModel.CurrentResource)?.Path
+                ?? [];
             LoggerService.LogInfo($"Resource: {string.Join(",", resources)}");
-            maaResource = new MaaResource(resources);
+
+
+            maaResource = await TaskManager.RunTaskAsync(() =>
+            {
+                token.ThrowIfCancellationRequested();
+                return new MaaResource(resources);
+            }, token, catchException: true, shouldLog: false, handleError: exception => HandleInitializationError(exception, "LoadResourcesFailed".ToLocalization()));
 
             maaResource.SetOptionInferenceDevice(Instances.PerformanceUserControlModel.GpuOption);
             LoggerService.LogInfo($"GPU acceleration: {Instances.PerformanceUserControlModel.GpuOption}");
         }
-        catch (Exception e)
+        catch (OperationCanceledException)
         {
-            HandleInitializationError(e, "LoadResourcesFailed".ToLocalization());
+            LoggerService.LogWarning("Resource loading was canceled");
+            return null;
+        }
+        catch (Exception)
+        {
             return null;
         }
 
-        LoggerService.LogInfo("InitResourcesSuccess".ToLocalization());
-        LoggerService.LogInfo("LoadingController".ToLocalization());
-        MaaController controller;
+        // 初始化控制器部分同理
+        MaaController controller = null;
         try
         {
-            controller = InitializeController();
-        }
-        catch (Exception e)
-        {
-            HandleInitializationError(e,
+            controller = await TaskManager.RunTaskAsync(() =>
+            {
+                token.ThrowIfCancellationRequested();
+                return InitializeController(Instances.ConnectingViewModel.CurrentController == MaaControllerTypes.Adb);
+            }, token, catchException: true, shouldLog: false, handleError: exception => HandleInitializationError(exception,
                 "ConnectingEmulatorOrWindow".ToLocalization()
                     .FormatWith(Instances.ConnectingViewModel.CurrentController == MaaControllerTypes.Adb
                         ? "Emulator".ToLocalization()
                         : "Window".ToLocalization()), true,
-                "InitControllerFailed".ToLocalization());
+                "InitControllerFailed".ToLocalization()));
+        }
+        catch (OperationCanceledException)
+        {
+            LoggerService.LogWarning("Controller initialization was canceled");
             return null;
         }
-
-        LoggerService.LogInfo("InitControllerSuccess".ToLocalization());
-
+        catch (Exception)
+        {
+            return null;
+        }
         try
         {
+            token.ThrowIfCancellationRequested();
             var tasker = new MaaTasker
             {
                 Controller = controller,
@@ -1034,47 +898,96 @@ public class MaaProcessor
             };
             RegisterCustomRecognitionsAndActions(tasker);
             Instances.ConnectingViewModel.SetConnected(true);
-            tasker.Utility.SetOptionRecording(MFAConfiguration.MaaConfig.GetConfig("recording", false));
-            tasker.Utility.SetOptionSaveDraw(MFAConfiguration.MaaConfig.GetConfig("save_draw", false));
-            tasker.Utility.SetOptionShowHitDraw(MFAConfiguration.MaaConfig.GetConfig("show_hit_draw", false));
+            tasker.Utility.SetOptionRecording(ConfigurationHelper.MaaConfig.GetConfig(ConfigurationKeys.Recording, false));
+            tasker.Utility.SetOptionSaveDraw(ConfigurationHelper.MaaConfig.GetConfig(ConfigurationKeys.SaveDraw, false));
+            tasker.Utility.SetOptionShowHitDraw(ConfigurationHelper.MaaConfig.GetConfig(ConfigurationKeys.ShowHitDraw, false));
             return tasker;
         }
-        catch (Exception e)
+        catch (OperationCanceledException)
         {
-            LoggerService.LogError(e);
+            LoggerService.LogWarning("Tasker initialization was canceled");
+            return null;
+        }
+        catch (Exception)
+        {
             return null;
         }
     }
 
-    private MaaController InitializeController()
+    // private async Task<MaaTasker?> InitializeMaaTasker(CancellationToken token)
+    // {
+    //     token.ThrowIfCancellationRequested();
+    //     AutoInitDictionary.Clear();
+    //
+    //     LoggerService.LogInfo("LoadingResources".ToLocalization());
+    //     MaaResource maaResource = null;
+    //     try
+    //     {
+    //         var resources = Instances.GameSettingsUserControlModel.CurrentResources.FirstOrDefault(c => c.Name == Instances.GameSettingsUserControlModel.CurrentResource)?.Path ?? [];
+    //         LoggerService.LogInfo($"Resource: {string.Join(",", resources)}");
+    //         maaResource = new MaaResource(resources);
+    //
+    //         maaResource.SetOptionInferenceDevice(Instances.PerformanceUserControlModel.GpuOption);
+    //         LoggerService.LogInfo($"GPU acceleration: {Instances.PerformanceUserControlModel.GpuOption}");
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         HandleInitializationError(e, "LoadResourcesFailed".ToLocalization());
+    //         return null;
+    //     }
+    //
+    //     LoggerService.LogInfo("InitResourcesSuccess".ToLocalization());
+    //     LoggerService.LogInfo("LoadingController".ToLocalization());
+    //     MaaController controller = null;
+    //     try
+    //     {
+    //         controller = InitializeController();
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         HandleInitializationError(e,
+    //             "ConnectingEmulatorOrWindow".ToLocalization()
+    //                 .FormatWith(Instances.ConnectingViewModel.CurrentController == MaaControllerTypes.Adb
+    //                     ? "Emulator".ToLocalization()
+    //                     : "Window".ToLocalization()), true,
+    //             "InitControllerFailed".ToLocalization());
+    //         return null;
+    //     }
+    //
+    //     LoggerService.LogInfo("InitControllerSuccess".ToLocalization());
+    //
+    //
+    // }
+
+    private MaaController InitializeController(bool isAdb)
     {
-        if (Instances.ConnectingViewModel.CurrentController == MaaControllerTypes.Adb)
+        if (isAdb)
         {
-            LoggerService.LogInfo($"AdbPath: {MaaFwConfig.AdbDevice.AdbPath}");
-            LoggerService.LogInfo($"AdbSerial: {MaaFwConfig.AdbDevice.AdbSerial}");
-            LoggerService.LogInfo($"ScreenCap: {MaaFwConfig.AdbDevice.ScreenCap}");
-            LoggerService.LogInfo($"Input: {MaaFwConfig.AdbDevice.Input}");
-            LoggerService.LogInfo($"Config: {MaaFwConfig.AdbDevice.Config}");
+            LoggerService.LogInfo($"AdbPath: {MaaFwConfiguration.AdbDevice.AdbPath}");
+            LoggerService.LogInfo($"AdbSerial: {MaaFwConfiguration.AdbDevice.AdbSerial}");
+            LoggerService.LogInfo($"ScreenCap: {MaaFwConfiguration.AdbDevice.ScreenCap}");
+            LoggerService.LogInfo($"Input: {MaaFwConfiguration.AdbDevice.Input}");
+            LoggerService.LogInfo($"Config: {MaaFwConfiguration.AdbDevice.Config}");
         }
         else
         {
-            LoggerService.LogInfo($"HWnd: {MaaFwConfig.DesktopWindow.HWnd}");
-            LoggerService.LogInfo($"ScreenCap: {MaaFwConfig.DesktopWindow.ScreenCap}");
-            LoggerService.LogInfo($"Input: {MaaFwConfig.DesktopWindow.Input}");
-            LoggerService.LogInfo($"Link: {MaaFwConfig.DesktopWindow.Link}");
-            LoggerService.LogInfo($"Check: {MaaFwConfig.DesktopWindow.Check}");
+            LoggerService.LogInfo($"HWnd: {MaaFwConfiguration.DesktopWindow.HWnd}");
+            LoggerService.LogInfo($"ScreenCap: {MaaFwConfiguration.DesktopWindow.ScreenCap}");
+            LoggerService.LogInfo($"Input: {MaaFwConfiguration.DesktopWindow.Input}");
+            LoggerService.LogInfo($"Link: {MaaFwConfiguration.DesktopWindow.Link}");
+            LoggerService.LogInfo($"Check: {MaaFwConfiguration.DesktopWindow.Check}");
         }
-        return Instances.ConnectingViewModel.CurrentController == MaaControllerTypes.Adb
+        return isAdb
             ? new MaaAdbController(
-                MaaFwConfig.AdbDevice.AdbPath,
-                MaaFwConfig.AdbDevice.AdbSerial,
-                MaaFwConfig.AdbDevice.ScreenCap, MaaFwConfig.AdbDevice.Input,
-                !string.IsNullOrWhiteSpace(MaaFwConfig.AdbDevice.Config) ? MaaFwConfig.AdbDevice.Config : "{}")
+                MaaFwConfiguration.AdbDevice.AdbPath,
+                MaaFwConfiguration.AdbDevice.AdbSerial,
+                MaaFwConfiguration.AdbDevice.ScreenCap, MaaFwConfiguration.AdbDevice.Input,
+                !string.IsNullOrWhiteSpace(MaaFwConfiguration.AdbDevice.Config) ? MaaFwConfiguration.AdbDevice.Config : "{}")
             : new MaaWin32Controller(
-                MaaFwConfig.DesktopWindow.HWnd,
-                MaaFwConfig.DesktopWindow.ScreenCap, MaaFwConfig.DesktopWindow.Input,
-                MaaFwConfig.DesktopWindow.Link,
-                MaaFwConfig.DesktopWindow.Check);
+                MaaFwConfiguration.DesktopWindow.HWnd,
+                MaaFwConfiguration.DesktopWindow.ScreenCap, MaaFwConfiguration.DesktopWindow.Input,
+                MaaFwConfiguration.DesktopWindow.Link,
+                MaaFwConfiguration.DesktopWindow.Check);
     }
 
     private static List<MetadataReference>? _metadataReferences;
@@ -1257,7 +1170,6 @@ public class MaaProcessor
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine(e);
                             LoggerService.LogError(e);
                         }
 
@@ -1279,7 +1191,6 @@ public class MaaProcessor
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine(e);
                             LoggerService.LogError(e);
                         }
 
@@ -1380,14 +1291,9 @@ public class MaaProcessor
         return buffer;
     }
 
-    public static void RestartAdb()
+    public async Task RestartAdb()
     {
-        if (!MFAConfiguration.GetConfiguration("AllowAdbRestart", false))
-        {
-            return;
-        }
-
-        var adbPath = MaaFwConfig.AdbDevice.AdbPath;
+        var adbPath = MaaFwConfiguration.AdbDevice.AdbPath;
 
         if (string.IsNullOrEmpty(adbPath))
         {
@@ -1409,16 +1315,16 @@ public class MaaProcessor
         };
 
         process.Start();
-        process.StandardInput.WriteLine($"{adbPath} kill-server");
-        process.StandardInput.WriteLine($"{adbPath} start-server");
-        process.StandardInput.WriteLine("exit");
-        process.WaitForExit();
+        await process.StandardInput.WriteLineAsync($"{adbPath} kill-server");
+        await process.StandardInput.WriteLineAsync($"{adbPath} start-server");
+        await process.StandardInput.WriteLineAsync("exit");
+        await process.WaitForExitAsync();
     }
 
-    public static void ReconnectByAdb()
+    public async Task ReconnectByAdb()
     {
-        var adbPath = MaaFwConfig.AdbDevice.AdbPath;
-        var address = MaaFwConfig.AdbDevice.AdbSerial;
+        var adbPath = MaaFwConfiguration.AdbDevice.AdbPath;
+        var address = MaaFwConfiguration.AdbDevice.AdbSerial;
 
         if (string.IsNullOrEmpty(adbPath))
         {
@@ -1440,19 +1346,14 @@ public class MaaProcessor
         };
 
         process.Start();
-        process.StandardInput.WriteLine($"{adbPath} disconnect {address}");
-        process.StandardInput.WriteLine("exit");
-        process.WaitForExit();
+        await process.StandardInput.WriteLineAsync($"{adbPath} disconnect {address}");
+        await process.StandardInput.WriteLineAsync("exit");
+        await process.WaitForExitAsync();
     }
 
-    public static void HardRestartAdb()
+    public async Task HardRestartAdb()
     {
-        if (!MFAConfiguration.GetConfiguration("AllowAdbHardRestart", false))
-        {
-            return;
-        }
-
-        var adbPath = MaaFwConfig.AdbDevice.AdbPath;
+        var adbPath = MaaFwConfiguration.AdbDevice.AdbPath;
         if (string.IsNullOrEmpty(adbPath))
         {
             return;
@@ -1484,7 +1385,7 @@ public class MaaProcessor
             try
             {
                 item.Process.Kill();
-                item.Process.WaitForExit();
+                await item.Process.WaitForExitAsync();
             }
             catch
             {

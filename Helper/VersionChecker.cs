@@ -213,7 +213,7 @@ public class VersionChecker
 
         SetText("GettingLatestResources", dialog, noDialog);
 
-        var resId = GetResourceID();
+        var resId = "MaaYuan";
         var currentVersion = GetResourceVersion();
         var cdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
         dialog?.UpdateProgress(10);
@@ -358,6 +358,14 @@ public class VersionChecker
             CopyFolder(resourceDirPath, Path.Combine(wpfDir, "resource"));
         }
 
+        // 复制 presets
+        var presetsDirPath = Path.Combine(tempExtractDir, "config");
+        var presetsDi = new DirectoryInfo(presetsDirPath);
+        if (presetsDi.Exists)
+        {
+            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "config"));
+        }
+
         dialog?.UpdateProgress(70);
         if (Directory.Exists(tempZipFilePath))
             File.Delete(tempZipFilePath);
@@ -423,7 +431,7 @@ public class VersionChecker
         try
         {
             Instances.RootViewModel.SetUpdating(true);
-            var resId = GetResourceID();
+            var resId = "MaaYuan";
             if (string.IsNullOrWhiteSpace(resId))
             {
                 ToastNotification.ShowDirect("CurrentResourcesNotSupportMirror".ToLocalization());
@@ -613,6 +621,14 @@ public class VersionChecker
         if (di.Exists)
         {
             CopyFolder(resourceDirPath, Path.Combine(wpfDir, "resource"));
+        }
+
+        // 复制presets目录
+        var presetsDirPath = Path.Combine(tempExtractDir, "config");
+        var presetsDi = new DirectoryInfo(presetsDirPath);
+        if (presetsDi.Exists)
+        {
+            CopyFolder(presetsDirPath, Path.Combine(wpfDir, "config"));
         }
 
         dialog?.UpdateProgress(70);
@@ -818,14 +834,14 @@ public class VersionChecker
 
         dialog?.UpdateProgress(10);
 
-        var resId = "MFAWPF";
+        var resId = "YuanMFA";
         var currentVersion = GetLocalVersion();
         var cdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
         Instances.RootViewModel.SetUpdating(true);
         string downloadUrl = string.Empty, latestVersion = string.Empty;
         try
         {
-            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out downloadUrl, out latestVersion, "MFA", true);
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out downloadUrl, out latestVersion, "YuanMFA", true);
 
         }
         catch (Exception ex)
@@ -1109,7 +1125,7 @@ public class VersionChecker
         }
     }
 
-    private void GetDownloadUrlFromMirror(string version, string resId, string cdk, out string url, out string latestVersion, string userAgent = "MFA", bool isUI = false, bool onlyCheck = false)
+    private void GetDownloadUrlFromMirror(string version, string resId, string cdk, out string url, out string latestVersion, string userAgent = "YuanMFA", bool isUI = false, bool onlyCheck = false)
     {
         var cdkD = onlyCheck ? string.Empty : $"cdk={cdk}&";
         var releaseUrl = isUI
@@ -1346,11 +1362,11 @@ public class VersionChecker
     {
         try
         {
-            var resId = "MFAWPF";
+            var resId = "YuanMFA";
             var currentVersion = GetLocalVersion();
             var cdk = SimpleEncryptionHelper.Decrypt(ConfigurationHelper.GetValue(ConfigurationKeys.DownloadCDK, string.Empty));
             Instances.RootViewModel.SetUpdating(true);
-            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "MFA", true, true);
+            GetDownloadUrlFromMirror(currentVersion, resId, cdk, out var downloadUrl, out var latestVersion, "YuanMFA", true, true);
 
             if (IsNewVersionAvailable(latestVersion, currentVersion))
             {
@@ -1476,7 +1492,7 @@ public class VersionChecker
         }
     }
 
-    public string GetLatestVersionFromGithub(string owner = "SweetSmellFox", string repo = "MFAWPF", bool isDownload = false)
+    public string GetLatestVersionFromGithub(string owner = "syoius", string repo = "MFAWPF", bool isDownload = false)
     {
         if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repo))
             return string.Empty;

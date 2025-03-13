@@ -789,6 +789,21 @@
   <data name="CurrentResourcesNotSupportMirror" xml:space="preserve">
     <value>该资源操作暂不支持 Mirror酱</value>
   </data>
+  <data name="SavePreset" xml:space="preserve">
+    <value>保存预设</value>
+  </data>
+  <data name="LoadPreset" xml:space="preserve">
+    <value>加载预设</value>
+  </data>
+  <data name="NoTaskToSave" xml:space="preserve">
+    <value>没有可保存的任务</value>
+  </data>
+  <data name="PresetNameEmpty" xml:space="preserve">
+    <value>预设名称不能为空</value>
+  </data>
+  <data name="NoPresetAvailable" xml:space="preserve">
+    <value>没有可用的预设</value>
+  </data>
   <data name="MirrorUseLimitReached" xml:space="preserve">
     <value>Mirror 酱的使用已达到上限</value>
   </data>
@@ -857,6 +872,12 @@
   </data>
   <data name="Announcement" xml:space="preserve">
     <value>公告</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>使用指南</value>
+  </data>
+  <data name="QQChannel" xml:space="preserve">
+    <value>交流反馈: QQ频道搜索Maa鸢</value>
   </data>
   <data name="CurrentResourcesNotSupportGitHub" xml:space="preserve">
     <value>该资源操作暂不支持 GitHub</value>

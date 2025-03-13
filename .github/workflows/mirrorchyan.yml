@@ -17,7 +17,7 @@ jobs:
         with:
           filetype: latest-release
           filename: "MFA*.zip"
-          mirrorchyan_rid: MFAWPF
+          mirrorchyan_rid: YuanMFA
 
           github_token: ${{ secrets.GITHUB_TOKEN }}
           owner: ${{ github.repository_owner }}

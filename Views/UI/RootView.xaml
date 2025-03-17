@@ -98,7 +98,7 @@
                     Margin="6,0,4,0"
                     Text="{lex:Loc ResourceVersion}"
                     VerticalAlignment="Center"
-                    Visibility="{c:Binding ViewModel.IsResourceVersionVisible}" />
+                    Visibility="{c:Binding ViewModel.IsResourceVersionPrefixVisible}" />
 
 
                 <!--  自定义标题  -->
@@ -119,6 +119,7 @@
                     VerticalAlignment="Center"
                     Visibility="{c:Binding ViewModel.IsResourceVersionVisible}" />
 
+                <!--  已连接  -->
                 <TextBlock
                     Foreground="{StaticResource GrayColor1}"
                     IsHitTestVisible="False"
@@ -154,6 +155,30 @@
                     Visibility="{c:Binding 'IsConnected',
                                            Source={x:Static utils:Instances.ConnectingViewModel}}"
                     Width="15" />
+
+                <!--  ADB地址  -->
+                <TextBlock
+                    Foreground="{DynamicResource PrimaryTextBrush}"
+                    IsHitTestVisible="False"
+                    Margin="6,0,2,0"
+                    Text="("
+                    VerticalAlignment="Center"
+                    Visibility="{c:Binding ViewModel.IsAdbAddressVisible}" />
+                <TextBlock
+                    Foreground="{StaticResource GrayColor1}"
+                    IsHitTestVisible="False"
+                    Margin="0,0,0,0"
+                    Text="{Binding ViewModel.AdbAddress}"
+                    VerticalAlignment="Center"
+                    Visibility="{c:Binding ViewModel.IsAdbAddressVisible}" />
+                <TextBlock
+                    Foreground="{DynamicResource PrimaryTextBrush}"
+                    IsHitTestVisible="False"
+                    Margin="2,0,4,0"
+                    Text=")"
+                    VerticalAlignment="Center"
+                    Visibility="{c:Binding ViewModel.IsAdbAddressVisible}" />
+
             </StackPanel>
 
             <controls1:PinButton

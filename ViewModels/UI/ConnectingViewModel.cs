@@ -33,6 +33,7 @@ public partial class ConnectingViewModel : ViewModel
             MaaProcessor.MaaFwConfiguration.DesktopWindow.Name = window.Name;
             MaaProcessor.MaaFwConfiguration.DesktopWindow.HWnd = window.Handle;
             MaaProcessor.Instance.SetCurrentTasker();
+            Instances.RootViewModel.HideAdbAddress();
         }
         else if (value is AdbDeviceInfo device)
         {
@@ -44,6 +45,10 @@ public partial class ConnectingViewModel : ViewModel
             MaaProcessor.MaaFwConfiguration.AdbDevice.Config = device.Config;
             MaaProcessor.Instance.SetCurrentTasker();
             ConfigurationHelper.SetValue(ConfigurationKeys.AdbDevice, device);
+            if (IsConnected)
+            {
+                Instances.RootViewModel.ShowAdbAddress(device.AdbSerial);
+            }
         }
     }
 
@@ -72,6 +77,14 @@ public partial class ConnectingViewModel : ViewModel
     public void SetConnected(bool isConnected)
     {
         IsConnected = isConnected;
+        if (!isConnected)
+        {
+            Instances.RootViewModel.HideAdbAddress();
+        }
+        else if (CurrentDevice is AdbDeviceInfo device)
+        {
+            Instances.RootViewModel.ShowAdbAddress(device.AdbSerial);
+        }
     }
 
 

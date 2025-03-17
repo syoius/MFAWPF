@@ -67,6 +67,12 @@ public partial class RootViewModel : ViewModel
 
     [ObservableProperty] private bool _isResourceVersionVisible;
 
+    [ObservableProperty] private bool _isResourceVersionPrefixVisible = true;
+
+    [ObservableProperty] private string? _adbAddress;
+
+    [ObservableProperty] private bool _isAdbAddressVisible;
+
     [ObservableProperty] private string? _customTitle;
 
     [ObservableProperty] private bool _isCustomTitleVisible;
@@ -85,6 +91,7 @@ public partial class RootViewModel : ViewModel
     {
         ResourceVersion = version;
         IsResourceVersionVisible = true;
+        IsResourceVersionPrefixVisible = !IsCustomTitleVisible;
     }
 
     public void ShowCustomTitle(string title)
@@ -94,6 +101,18 @@ public partial class RootViewModel : ViewModel
         IsDefaultTitleVisible = false;
         IsVersionVisible = false;
         IsResourceNameVisible = false;
-        IsResourceVersionVisible = false;
+        IsResourceVersionVisible = true;
+        IsResourceVersionPrefixVisible = false;
+    }
+
+    public void ShowAdbAddress(string address)
+    {
+        AdbAddress = address;
+        IsAdbAddressVisible = true;
+    }
+
+    public void HideAdbAddress()
+    {
+        IsAdbAddressVisible = false;
     }
 }

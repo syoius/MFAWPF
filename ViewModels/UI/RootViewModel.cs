@@ -69,6 +69,10 @@ public partial class RootViewModel : ViewModel
 
     [ObservableProperty] private bool _isResourceVersionPrefixVisible = true;
 
+    [ObservableProperty] private string? _currentResourceType;
+
+    [ObservableProperty] private bool _isCurrentResourceTypeVisible;
+
     [ObservableProperty] private string? _adbAddress;
 
     [ObservableProperty] private bool _isAdbAddressVisible;
@@ -114,5 +118,16 @@ public partial class RootViewModel : ViewModel
     public void HideAdbAddress()
     {
         IsAdbAddressVisible = false;
+    }
+
+    public void ShowCurrentResourceType(string resourceType)
+    {
+        CurrentResourceType = resourceType;
+        IsCurrentResourceTypeVisible = true;
+    }
+
+    public void HideCurrentResourceType()
+    {
+        IsCurrentResourceTypeVisible = false;
     }
 }

@@ -788,21 +788,6 @@
   <data name="CurrentResourcesNotSupportMirror" xml:space="preserve">
     <value>該資源操作暫不支援 Mirror醬</value>
   </data>
-  <data name="SavePreset" xml:space="preserve">
-    <value>保存預設</value>
-  </data>
-  <data name="LoadPreset" xml:space="preserve">
-    <value>加載預設</value>
-  </data>
-  <data name="NoTaskToSave" xml:space="preserve">
-    <value>沒有可保存的任務</value>
-  </data>
-  <data name="PresetNameEmpty" xml:space="preserve">
-    <value>預設名稱不能爲空</value>
-  </data>
-  <data name="NoPresetAvailable" xml:space="preserve">
-    <value>沒有可用的預設</value>
-  </data>
   <data name="MirrorUseLimitReached" xml:space="preserve">
     <value>Mirror 醬的使用已達到上限</value>
   </data>

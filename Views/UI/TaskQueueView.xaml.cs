@@ -288,7 +288,15 @@ public partial class TaskQueueView
                     }
                 ];
         if (Instances.GameSettingsUserControlModel.CurrentResources.Count > 0 && Instances.GameSettingsUserControlModel.CurrentResources.All(r => r.Name != Instances.GameSettingsUserControlModel.CurrentResource))
-            Instances.GameSettingsUserControlModel.CurrentResource = Instances.GameSettingsUserControlModel.CurrentResources[0].Name ?? "Default";
+        {
+            var defaultResource = Instances.GameSettingsUserControlModel.CurrentResources[0].Name ?? "Default";
+            Instances.GameSettingsUserControlModel.CurrentResource = defaultResource;
+            Instances.RootViewModel.ShowCurrentResourceType(defaultResource);
+        }
+        else if (!string.IsNullOrWhiteSpace(Instances.GameSettingsUserControlModel.CurrentResource))
+        {
+            Instances.RootViewModel.ShowCurrentResourceType(Instances.GameSettingsUserControlModel.CurrentResource);
+        }
     }
 
     private (List<DragItemViewModel> updateList, List<DragItemViewModel> removeList) SynchronizeTaskItems(

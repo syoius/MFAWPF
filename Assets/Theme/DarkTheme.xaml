@@ -2,32 +2,32 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:system="clr-namespace:System;assembly=mscorlib"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Color x:Key="MainBackgroundColor">#FF262E2F</Color>
-    <Color x:Key="MainContentForegroundColor">#FF1A1A1A</Color>
-    <Color x:Key="MainContentBackgroundColor">#FF1C1C1C</Color>
+    <Color x:Key="MainBackgroundColor">#1C1B19</Color>
+    <Color x:Key="MainContentForegroundColor">#FCE8C3</Color>
+    <Color x:Key="MainContentBackgroundColor">#2D2C29</Color>
 
-    <Color x:Key="PrimaryTextColor">#FFFFFFFF</Color>
-    <Color x:Key="SecondaryTextColor">#FF757575</Color>
-    <Color x:Key="ThirdlyTextColor">#FF3F3F46</Color>
-    <Color x:Key="ReverseTextColor">#FF212121</Color>
-    <Color x:Key="TextIconColor">#FFFFFFFF</Color>
+    <Color x:Key="PrimaryTextColor">#FCE8C3</Color>
+    <Color x:Key="SecondaryTextColor">#918175</Color>
+    <Color x:Key="ThirdlyTextColor">#666666</Color>
+    <Color x:Key="ReverseTextColor">#1C1B19</Color>
+    <Color x:Key="TextIconColor">#FCE8C3</Color>
 
-    <Color x:Key="BorderColor">#FF3F3F46</Color>
-    <Color x:Key="SecondaryBorderColor">#FF555555</Color>
-    <Color x:Key="BackgroundColor">#FFEEEEEE</Color>
-    <Color x:Key="RegionColor">#FF1C1C1C</Color>
-    <Color x:Key="SecondaryRegionColor">#FF2D2D30</Color>
-    <Color x:Key="ThirdlyRegionColor">#FF424242</Color>
+    <Color x:Key="BorderColor">#3D3C39</Color>
+    <Color x:Key="SecondaryBorderColor">#918175</Color>
+    <Color x:Key="BackgroundColor">#1C1B19</Color>
+    <Color x:Key="RegionColor">#2D2C29</Color>
+    <Color x:Key="SecondaryRegionColor">#262626</Color>
+    <Color x:Key="ThirdlyRegionColor">#333333</Color>
 
-    <Color x:Key="DefaultColor">#FF686868</Color>
-    <Color x:Key="DarkDefaultColor">#FF686868</Color>
+    <Color x:Key="DefaultColor">#1C1B19</Color>
+    <Color x:Key="DarkDefaultColor">#262626</Color>
 
-    <Color x:Key="AccentColor">#FFFF5722</Color>
-    <Color x:Key="DarkAccentColor">#FFD43F3A</Color>
+    <Color x:Key="AccentColor">#FBB829</Color>
+    <Color x:Key="DarkAccentColor">#D75F00</Color>
 
     <Color x:Key="DarkMaskColor">#40000000</Color>
     <Color x:Key="DarkOpacityColor">#40000000</Color>
-    <system:UInt32 x:Key="BlurGradientValue">0x99000000</system:UInt32>
+    <system:UInt32 x:Key="BlurGradientValue">0x991C1B19</system:UInt32>
 
     <LinearGradientBrush EndPoint="1,0" StartPoint="0,0" x:Key="AccentBrush">
         <GradientStop Color="{DynamicResource AccentColor}" Offset="0" />
@@ -38,13 +38,13 @@
     <SolidColorBrush Color="{DynamicResource MainBackgroundColor}" x:Key="MainBackgroundBrush" />
     <SolidColorBrush Color="{DynamicResource MainContentForegroundColor}" x:Key="MainContentForegroundBrush" />
     <SolidColorBrush Color="{DynamicResource MainContentBackgroundColor}" x:Key="MainContentBackgroundBrush" />
-    <SolidColorBrush Color="#2d2d30" x:Key="VersionUpdateViewBackgroundBrush" />
+    <SolidColorBrush Color="#2D2C29" x:Key="VersionUpdateViewBackgroundBrush" />
 
     <SolidColorBrush Color="{DynamicResource PrimaryTextColor}" x:Key="PrimaryTextBrush" />
     <SolidColorBrush Color="{DynamicResource SecondaryTextColor}" x:Key="SecondaryTextBrush" />
     <SolidColorBrush Color="{DynamicResource ThirdlyTextColor}" x:Key="ThirdlyTextBrush" />
     <SolidColorBrush Color="{DynamicResource ReverseTextColor}" x:Key="ReverseTextBrush" />
-    <SolidColorBrush Color="White" x:Key="TipTextBrush" />
+    <SolidColorBrush Color="#918175" x:Key="TipTextBrush" />
     <SolidColorBrush Color="{DynamicResource TextIconColor}" x:Key="TextIconBrush" />
 
     <SolidColorBrush Color="{DynamicResource BorderColor}" x:Key="BorderBrush" />
@@ -60,40 +60,37 @@
     <SolidColorBrush Color="{DynamicResource DarkMaskColor}" x:Key="DarkMaskBrush" />
     <SolidColorBrush Color="{DynamicResource DarkOpacityColor}" x:Key="DarkOpacityBrush" />
 
+    <!-- Background Colors -->
+    <SolidColorBrush Color="#1C1B19" x:Key="PrimaryBackgroundColor" />
+    <SolidColorBrush Color="#2D2C29" x:Key="SecondaryBackgroundColor" />
+    <SolidColorBrush Color="#E02C6D" x:Key="ErrorViewBackgroundBrush" />
 
-    <!--  Background Colors  -->
-    <SolidColorBrush Color="#FF212121" x:Key="PrimaryBackgroundColor" />
-    <SolidColorBrush Color="#FF3F3F46" x:Key="SecundaryBackgroundColor" />
-    <SolidColorBrush Color="#2d2d30" x:Key="ErrorViewBackgroundBrush" />
+    <!-- Primary Colors -->
+    <SolidColorBrush Color="#FBB829" x:Key="PrimaryBlueColor" />
+    <SolidColorBrush Color="#f5c662" x:Key="PrimaryLightBlueColor" />
+    <SolidColorBrush Color="#918175" x:Key="PrimaryGrayColor" />
 
-    <!--  Primary Colors  -->
-    <SolidColorBrush Color="#5B7FFF" x:Key="PrimaryBlueColor" />
-    <SolidColorBrush Color="#28AEED" x:Key="PrimaryLightBlueColor" />
-    <SolidColorBrush Color="#BFBFC4" x:Key="PrimaryGrayColor" />
+    <!-- Secondary Colors -->
+    <SolidColorBrush Color="#2C78BF" x:Key="SecondaryBlueColor" />
+    <SolidColorBrush Color="#333333" x:Key="SecondaryGrayColor" />
 
-    <!--  Secundary Colors  -->
-    <SolidColorBrush Color="#CEE8FB" x:Key="SecundaryBlueColor" />
-    <SolidColorBrush Color="DarkGray" x:Key="SecundaryGrayColor" />
+    <!-- Icons Colors -->
+    <SolidColorBrush Color="#FCE8C3" x:Key="ActionIconColor" />
 
-    <!--  Icons Colors  -->
-    <SolidColorBrush Color="#FFEEEEEE" x:Key="ActionIconColor" />
+    <SolidColorBrush Color="#FCE8C3" x:Key="BlackColor" />
+    <SolidColorBrush Color="#1C1B19" x:Key="WhiteColor" />
 
-    <SolidColorBrush Color="#FFEEEEEE" x:Key="BlackColor" />
+    <SolidColorBrush Color="#918175" x:Key="GrayColor1" />
+    <SolidColorBrush Color="#666666" x:Key="GrayColor3" />
+    <SolidColorBrush Color="#918175" x:Key="GrayColor4" />
+    <SolidColorBrush Color="#2D2C29" x:Key="GrayColor5" />
+    <SolidColorBrush Color="#333333" x:Key="GrayColor9" />
+    <SolidColorBrush Color="#918175" x:Key="GrayColor10" />
+    <SolidColorBrush Color="#2D2C29" x:Key="GrayColor11" />
 
-    <SolidColorBrush Color="#FF686868" x:Key="WhiteColor" />
-
-    <SolidColorBrush Color="#868686" x:Key="GrayColor1" />
-    <SolidColorBrush Color="#646465" x:Key="GrayColor3" />
-    <SolidColorBrush Color="DarkGray" x:Key="GrayColor4" />
-    <SolidColorBrush Color="LightGray" x:Key="GrayColor5" />
-    <SolidColorBrush Color="#e9e9e9" x:Key="GrayColor9" />
-    <SolidColorBrush Color="#FF212121" x:Key="GrayColor10" />
-    <SolidColorBrush Color="#646465" x:Key="GrayColor11" />
-
-    <SolidColorBrush Color="#6F59D4" x:Key="PurpleColor1" />
-
-    <SolidColorBrush Color="#F72626" x:Key="RedColor1" />
-    <SolidColorBrush Color="Violet" x:Key="DownloadLogBrush" />
-    <SolidColorBrush Color="LightBlue" x:Key="BlueColor2" />
-    <SolidColorBrush Color="LightSkyBlue" x:Key="BlueColor1" />
-</ResourceDictionary>
+    <SolidColorBrush Color="#E02C6D" x:Key="PurpleColor1" />
+    <SolidColorBrush Color="#EF2F27" x:Key="RedColor1" />
+    <SolidColorBrush Color="#FBB829" x:Key="DownloadLogBrush" />
+    <SolidColorBrush Color="#FBB829" x:Key="BlueColor2" />
+    <SolidColorBrush Color="#FBB829" x:Key="BlueColor1" />
+</ResourceDictionary> 

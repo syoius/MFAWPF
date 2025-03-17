@@ -140,7 +140,7 @@
 
     <Style BasedOn="{StaticResource DividerBaseStyle}" TargetType="hc:Divider">
         <Setter Property="Foreground" Value="{DynamicResource SecondaryBorderBrush}" />
-        <Setter Property="LineStroke" Value="{DynamicResource GrayColor5}" />
+        <Setter Property="LineStroke" Value="{DynamicResource SecondaryBorderBrush}" />
     </Style>
     <!--  End: VerticalMenuStyle  -->
 </ResourceDictionary>

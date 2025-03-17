@@ -69,5 +69,13 @@ public partial class GameSettingsUserControlModel : ViewModel
     partial void OnCurrentResourceChanged(string value)
     {
         ConfigurationHelper.SetValue(ConfigurationKeys.Resource, value);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            Instances.RootViewModel.HideCurrentResourceType();
+        }
+        else
+        {
+            Instances.RootViewModel.ShowCurrentResourceType(value);
+        }
     }
 }

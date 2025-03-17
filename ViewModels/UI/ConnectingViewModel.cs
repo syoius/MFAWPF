@@ -84,7 +84,6 @@ public partial class ConnectingViewModel : ViewModel
         {
             Devices = [dialog.Output];
             CurrentDevice = dialog.Output;
-            SetConnected(true);
         }
     }
 
@@ -119,8 +118,13 @@ public partial class ConnectingViewModel : ViewModel
         index = 0;
         return false;
     }
-
+    
     [RelayCommand]
+    private void Refresh()
+    {
+        TaskManager.RunTaskAsync(AutoDetectDevice);
+    }
+
     public void AutoDetectDevice()
     {
         var isAdb = CurrentController == MaaControllerTypes.Adb;

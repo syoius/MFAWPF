@@ -1137,15 +1137,16 @@ public class VersionChecker
         try
         {
             var response = httpClient.GetAsync(releaseUrl).Result;
+            string message = string.Empty;
             try
             {
                 response.EnsureSuccessStatusCode();
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException e)
             {
                 if ((int)response.StatusCode == 403)
                 {
-                    throw new Exception("MirrorUseLimitReached".ToLocalization());
+                    message = e.Message;
                 }
             }
 
@@ -1153,7 +1154,17 @@ public class VersionChecker
             read.Wait();
             var jsonResponse = read.Result;
             var responseData = JObject.Parse(jsonResponse);
-
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (responseData["msg"] != null && responseData["msg"].ToString().ToLower().Contains("reached the most", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new Exception("MirrorUseLimitReached".ToLocalization());
+                }
+                else
+                {
+                    throw new Exception(message);
+                }
+            }
             if ((int)responseData["code"] == 0)
             {
                 var data = responseData["data"];

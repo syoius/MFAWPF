@@ -966,10 +966,22 @@
   <data name="ExternalNotificationQmsgBot" xml:space="preserve">
   <value>机器人 QQ</value>
 </data>
+  <data name="ExternalNotificationOneBotServer" xml:space="preserve">
+  <value>Server</value>
+</data>
+  <data name="ExternalNotificationOneBotKey" xml:space="preserve">
+  <value>Key</value>
+</data>
+  <data name="ExternalNotificationOneBotUser" xml:space="preserve">
+  <value>用户 QQ</value>
+</data>
   <data name="ExternalNotificationSmtpServer" xml:space="preserve">
     <value>SMTP 服务器</value>
   </data>
   <data name="EmulatorExtras" xml:space="preserve">
     <value>EmulatorExtras (特化)</value>
+  </data>
+  <data name="StartingAgent" xml:space="preserve">
+    <value>正在启动 Agent(耗时可能较久)</value>
   </data>
 </root>

@@ -4,6 +4,8 @@ public static class MFAUrls
 {
     public const string GitHub = "https://github.com/syoius/MaaYuan";
 
+    public const string MFAGithub = "https://github.com/syoius/MFAWPF";
+
     public const string GitHubIssues = $"{GitHub}/issues";
 
     public const string NewIssueUri = $"{GitHubIssues}/new?assignees=&labels=bug&template=cn-bug-report.yaml";

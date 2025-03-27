@@ -978,7 +978,7 @@ public class VersionChecker
 
         SetText("GettingLatestSoftware", dialog, noDialog);
 
-        var url = MFAUrls.GitHub;
+        var url = MFAUrls.MFAGithub;
 
         dialog?.UpdateProgress(10);
 

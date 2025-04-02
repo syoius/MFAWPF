@@ -17,8 +17,8 @@
         <dialog:AddTaskDialogViewModel />
     </controls:CustomWindow.DataContext>
     <Border
-        Background="{DynamicResource SecundaryBackgroundColor}"
-        BorderBrush="{DynamicResource GrayColor10}"
+        Background="{DynamicResource SecondaryBackgroundColor}"
+        BorderBrush="{DynamicResource GrayColor1}"
         BorderThickness="1"
         CornerRadius="10">
 
@@ -32,7 +32,7 @@
                     <TextBlock
                         FontSize="17"
                         FontWeight="Bold"
-                        Foreground="{StaticResource BlackColor}"
+                        Foreground="{StaticResource SecondaryBorderBrush}"
                         HorizontalAlignment="Center"
                         Margin="0,0,0,0"
                         Text="{lex:LocText ButtonAdd}"
@@ -132,7 +132,7 @@
                         Click="Close"
                         Content="{lex:Loc ButtonCancel}"
                         FontSize="11"
-                        Foreground="{DynamicResource BlackColor}"
+                        Foreground="{DynamicResource GrayColor1}"
                         Height="30"
                         Margin="20,0,10,5"
                         VerticalContentAlignment="Center"

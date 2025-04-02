@@ -63,7 +63,7 @@
 
     <!--  Background Colors  -->
     <SolidColorBrush Color="#f3f3f3" x:Key="PrimaryBackgroundColor" />
-    <SolidColorBrush Color="#f9f9f9" x:Key="SecundaryBackgroundColor" />
+    <SolidColorBrush Color="#f9f9f9" x:Key="SecondaryBackgroundColor" />
     <SolidColorBrush Color="#E6E6E6" x:Key="ErrorViewBackgroundBrush" />
 
     <!--  Primary Colors  -->
@@ -71,9 +71,9 @@
     <SolidColorBrush Color="#28AEED" x:Key="PrimaryLightBlueColor" />
     <SolidColorBrush Color="#BFBFC4" x:Key="PrimaryGrayColor" />
 
-    <!--  Secundary Colors  -->
-    <SolidColorBrush Color="#CEE8FB" x:Key="SecundaryBlueColor" />
-    <SolidColorBrush Color="#EEEEEE" x:Key="SecundaryGrayColor" />
+    <!--  Secondary Colors  -->
+    <SolidColorBrush Color="#CEE8FB" x:Key="SecondaryBlueColor" />
+    <SolidColorBrush Color="#EEEEEE" x:Key="SecondaryGrayColor" />
 
     <!--  Typograhy Colors  -->
     <SolidColorBrush Color="#020F16" x:Key="TextPrimaryColor" />
